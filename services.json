@@ -1,0 +1,124 @@
+{
+  "services": [
+    {
+      "id": "claude",
+      "name": "Claude AI",
+      "icon": "🤖",
+      "category": "AI",
+      "url": "https://api.anthropic.com",
+      "check_url": "https://api.anthropic.com/v1/messages",
+      "check_type": "ai_region",
+      "port": 443
+    },
+    {
+      "id": "chatgpt",
+      "name": "ChatGPT",
+      "icon": "💬",
+      "category": "AI",
+      "url": "https://api.openai.com",
+      "check_url": "https://api.openai.com/v1/models",
+      "check_type": "ai_region",
+      "port": 443
+    },
+    {
+      "id": "gemini",
+      "name": "Gemini",
+      "icon": "✨",
+      "category": "AI",
+      "url": "https://generativelanguage.googleapis.com",
+      "check_url": "https://generativelanguage.googleapis.com/v1/models",
+      "check_type": "ai_region",
+      "port": 443
+    },
+    {
+      "id": "youtube",
+      "name": "YouTube",
+      "icon": "▶",
+      "category": "Media",
+      "url": "https://www.youtube.com",
+      "check_url": "https://www.youtube.com",
+      "check_type": "http",
+      "port": 443
+    },
+    {
+      "id": "twitch",
+      "name": "Twitch",
+      "icon": "🎮",
+      "category": "Media",
+      "url": "https://www.twitch.tv",
+      "check_url": "https://www.twitch.tv",
+      "check_type": "http",
+      "port": 443
+    },
+    {
+      "id": "instagram",
+      "name": "Instagram",
+      "icon": "📸",
+      "category": "Social",
+      "url": "https://www.instagram.com",
+      "check_url": "https://www.instagram.com",
+      "check_type": "http",
+      "port": 443
+    },
+    {
+      "id": "vk",
+      "name": "VK",
+      "icon": "🔵",
+      "category": "Social",
+      "url": "https://vk.com",
+      "check_url": "https://vk.com",
+      "check_type": "http",
+      "port": 443
+    },
+    {
+      "id": "telegram",
+      "name": "Telegram",
+      "icon": "✈",
+      "category": "Social",
+      "url": "https://telegram.org",
+      "check_url": "https://telegram.org",
+      "check_type": "http",
+      "port": 443
+    },
+    {
+      "id": "github",
+      "name": "GitHub",
+      "icon": "🐙",
+      "category": "Other",
+      "url": "https://github.com",
+      "check_url": "https://github.com",
+      "check_type": "http",
+      "port": 443
+    },
+    {
+      "id": "discord",
+      "name": "Discord",
+      "icon": "🎮",
+      "category": "Other",
+      "url": "https://discord.com",
+      "check_url": "https://discord.com",
+      "check_type": "http",
+      "port": 443
+    },
+    {
+      "id": "vrchat",
+      "name": "VRChat",
+      "icon": "🌐",
+      "category": "Other",
+      "url": "https://vrchat.com",
+      "check_url": "https://vrchat.com",
+      "check_type": "http",
+      "port": 443
+    },
+    {
+      "id": "vrcdn",
+      "name": "VRCDN",
+      "icon": "📡",
+      "category": "Other",
+      "url": "https://vrcdn.live",
+      "check_url": "https://vrcdn.live",
+      "check_type": "http",
+      "port": 443
+    }
+  ]
+}
