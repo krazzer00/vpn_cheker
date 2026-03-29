@@ -1,8 +1,6 @@
 # widgets/speed_bar.py
 import customtkinter as ctk
-from theme import DARKER_BG, BORDER, COLOR_MUTED, COLOR_OK, COLOR_WARN, COLOR_BAD
-
-ACCENT_TEXT = "#e0e0e0"
+from theme import DARKER_BG, BORDER, COLOR_MUTED, COLOR_OK, COLOR_WARN, COLOR_BAD, ACCENT_TEXT
 
 
 class SpeedBar(ctk.CTkFrame):

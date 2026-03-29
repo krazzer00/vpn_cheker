@@ -1,6 +1,6 @@
 # widgets/service_card.py
 import customtkinter as ctk
-from theme import CARD_BG, BORDER, COLOR_OK, COLOR_WARN, COLOR_BAD, COLOR_CHECKING, COLOR_MUTED
+from theme import CARD_BG, BORDER, COLOR_OK, COLOR_WARN, COLOR_BAD, COLOR_CHECKING, COLOR_MUTED, BADGE_CHECKING_BG
 
 
 def _ping_color(ping_ms):
@@ -42,7 +42,7 @@ class ServiceCard(ctk.CTkFrame):
             top, text="Ожидание...",
             font=("Segoe UI", 10, "bold"),
             text_color=COLOR_CHECKING,
-            fg_color="#1e1e3a", corner_radius=10
+            fg_color=BADGE_CHECKING_BG, corner_radius=10
         )
         self.status_badge.pack(side="right", padx=(4, 0))
 
@@ -64,7 +64,7 @@ class ServiceCard(ctk.CTkFrame):
 
     def set_checking(self):
         self.status_badge.configure(text="Проверка...", text_color=COLOR_CHECKING,
-                                    fg_color="#1e1e3a")
+                                    fg_color=BADGE_CHECKING_BG)
         self.ping_label.configure(text="—", text_color="white")
         self.loss_label.configure(text="—", text_color="white")
         self.region_label.configure(text="—", text_color="white")
@@ -85,14 +85,14 @@ class ServiceCard(ctk.CTkFrame):
                                         fg_color=_alpha_color(COLOR_BAD))
             self.configure(border_color=COLOR_BAD)
 
-        ping_text = f"{ping_ms} ms" if ping_ms is not None else "—"
+        ping_text = f"{ping_ms:.0f} ms" if ping_ms is not None else "—"
         self.ping_label.configure(text=ping_text, text_color=_ping_color(ping_ms))
 
         if loss_pct is None:
             self.loss_label.configure(text="н/п", text_color=COLOR_MUTED)
         else:
             loss_color = COLOR_OK if loss_pct == 0 else (COLOR_WARN if loss_pct < 10 else COLOR_BAD)
-            self.loss_label.configure(text=f"{loss_pct}%", text_color=loss_color)
+            self.loss_label.configure(text=f"{loss_pct:.1f}%", text_color=loss_color)
 
         if region is None:
             self.region_label.configure(text="н/п", text_color=COLOR_MUTED)
