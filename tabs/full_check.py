@@ -144,6 +144,8 @@ class FullCheckTab(ctk.CTkFrame):
     def _start_check(self):
         if self._running:
             return
+        if not self._selected:
+            return
         self._running = True
         self.run_btn.configure(state="disabled", text="Проверка...")
 
@@ -162,8 +164,6 @@ class FullCheckTab(ctk.CTkFrame):
             card = self.cards.get(msg["id"])
             if card:
                 card.update_result(msg)
-                if msg.get("ping_ms") is not None:
-                    self.speed_bar.update_ping(msg["ping_ms"], msg.get("loss_pct"))
 
         elif msg["type"] == "speed":
             self.speed_bar.update_speed(msg)

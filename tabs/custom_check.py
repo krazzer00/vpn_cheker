@@ -7,9 +7,7 @@ import customtkinter as ctk
 
 from engine.ping import ping_host
 from engine.http_check import http_check
-from theme import DARK_BG, BORDER, ACCENT, COLOR_OK, COLOR_BAD, COLOR_WARN, COLOR_MUTED
-
-CARD_BG = "#1a1a26"
+from theme import DARK_BG, BORDER, ACCENT, COLOR_OK, COLOR_BAD, COLOR_WARN, COLOR_MUTED, CARD_BG
 
 
 class CustomCheckTab(ctk.CTkFrame):
