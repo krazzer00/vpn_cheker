@@ -8,10 +8,7 @@ from tabs.custom_check import CustomCheckTab
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
 
-DARK_BG = "#16161f"
-DARKER_BG = "#111118"
-BORDER = "#2a2a3a"
-ACCENT = "#5b6af5"
+from theme import DARK_BG, DARKER_BG, ACCENT
 
 
 class VpnCheckerApp(ctk.CTk):
@@ -26,7 +23,7 @@ class VpnCheckerApp(ctk.CTk):
 
         self._build_titlebar()
         self._build_tabs()
-        self._start_queue_poll()
+        self._poll_queue()
 
     def _build_titlebar(self):
         bar = ctk.CTkFrame(self, fg_color=DARKER_BG, height=40, corner_radius=0)
@@ -58,9 +55,6 @@ class VpnCheckerApp(ctk.CTk):
             self.result_queue
         )
         self.custom_tab.pack(fill="both", expand=True)
-
-    def _start_queue_poll(self):
-        self._poll_queue()
 
     def _poll_queue(self):
         try:
