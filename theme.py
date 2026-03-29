@@ -13,3 +13,11 @@ COLOR_MUTED = "#555566"
 
 BADGE_CHECKING_BG = "#1e1e3a"   # badge background for "checking" state
 ACCENT_TEXT = "#e0e0e0"          # large value text color (used in SpeedBar)
+
+TIER_COLORS = {
+    "S": "#4CAF50",
+    "A": "#42a5f5",
+    "B": "#FFC107",
+    "C": "#FF9800",
+    "F": "#F44336",
+}

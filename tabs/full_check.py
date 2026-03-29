@@ -8,16 +8,7 @@ from engine.checker import run_checks
 from engine.config import load_services as _load_services_from_config
 from widgets.service_card import ServiceCard
 from widgets.speed_bar import SpeedBar
-from theme import DARK_BG, DARKER_BG, BORDER, ACCENT, COLOR_MUTED
-
-
-TIER_COLORS = {
-    "S": "#4CAF50",
-    "A": "#42a5f5",
-    "B": "#FFC107",
-    "C": "#FF9800",
-    "F": "#F44336",
-}
+from theme import DARK_BG, DARKER_BG, BORDER, ACCENT, COLOR_MUTED, TIER_COLORS
 
 
 class FullCheckTab(ctk.CTkFrame):
