@@ -9,13 +9,14 @@ def test_ping_host_returns_dict_keys():
     assert "method" in result
 
 def test_ping_host_calculates_loss():
-    # 1 out of 4 packets lost
-    with patch("engine.ping.ping3.ping", side_effect=[0.01, None, 0.01, 0.01]):
+    # probe (1) + 4 loop packets, 1 None = 25% loss
+    with patch("engine.ping.ping3.ping", side_effect=[0.01, 0.01, None, 0.01, 0.01]):
         result = ping_host("8.8.8.8", count=4)
     assert result["loss_pct"] == 25.0
 
 def test_ping_host_all_lost():
-    with patch("engine.ping.ping3.ping", return_value=None):
+    # probe succeeds, then all 4 loop packets are None
+    with patch("engine.ping.ping3.ping", side_effect=[0.01, None, None, None, None]):
         result = ping_host("8.8.8.8", count=4)
     assert result["ping_ms"] is None
     assert result["loss_pct"] == 100.0
@@ -27,6 +28,7 @@ def test_tcp_ping_success():
         result = tcp_ping("github.com", 443)
     assert result["ping_ms"] is not None
     assert result["method"] == "tcp"
+    assert result["loss_pct"] is None  # TCP can't measure loss
 
 def test_tcp_ping_failure():
     with patch("engine.ping.socket.create_connection", side_effect=OSError):
