@@ -1,6 +1,7 @@
 # tabs/full_check.py
 import json
 import queue
+import sys as _sys
 import threading
 from pathlib import Path
 
@@ -11,7 +12,14 @@ from widgets.service_card import ServiceCard
 from widgets.speed_bar import SpeedBar
 from theme import DARK_BG, DARKER_BG, BORDER, ACCENT, COLOR_MUTED
 
-_SERVICES_PATH = Path(__file__).parent.parent / "services.json"
+
+def _get_services_path() -> Path:
+    if getattr(_sys, "frozen", False):
+        # Running as PyInstaller frozen exe — files are in sys._MEIPASS
+        return Path(_sys._MEIPASS) / "services.json"
+    return Path(__file__).parent.parent / "services.json"
+
+_SERVICES_PATH = _get_services_path()
 
 TIER_COLORS = {
     "S": "#4CAF50",
