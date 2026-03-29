@@ -50,6 +50,10 @@ def run_checks(services: list[dict], result_queue: queue.Queue) -> None:
     service_results = []
     lock = threading.Lock()
 
+    if not services:
+        result_queue.put({"type": "verdict", **compute_verdict([])})
+        return
+
     def speedtest_worker():
         speed = run_speedtest()
         result_queue.put({"type": "speed", **speed})
@@ -88,5 +92,5 @@ def run_checks(services: list[dict], result_queue: queue.Queue) -> None:
 
 
 def run_single_check(service: dict) -> dict:
-    """Single service check for the custom tab."""
+    """Single service check for the custom tab. Exceptions propagate to caller."""
     return _check_one_service(service)
