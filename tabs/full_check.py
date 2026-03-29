@@ -1,25 +1,15 @@
 # tabs/full_check.py
-import json
 import queue
-import sys as _sys
 import threading
-from pathlib import Path
 
 import customtkinter as ctk
 
 from engine.checker import run_checks
+from engine.config import load_services as _load_services_from_config
 from widgets.service_card import ServiceCard
 from widgets.speed_bar import SpeedBar
 from theme import DARK_BG, DARKER_BG, BORDER, ACCENT, COLOR_MUTED
 
-
-def _get_services_path() -> Path:
-    if getattr(_sys, "frozen", False):
-        # Running as PyInstaller frozen exe — files are in sys._MEIPASS
-        return Path(_sys._MEIPASS) / "services.json"
-    return Path(__file__).parent.parent / "services.json"
-
-_SERVICES_PATH = _get_services_path()
 
 TIER_COLORS = {
     "S": "#4CAF50",
@@ -30,16 +20,11 @@ TIER_COLORS = {
 }
 
 
-def _load_services():
-    with open(_SERVICES_PATH, encoding="utf-8") as f:
-        return json.load(f)["services"]
-
-
 class FullCheckTab(ctk.CTkFrame):
     def __init__(self, master, result_queue: queue.Queue, **kwargs):
         super().__init__(master, fg_color=DARK_BG, **kwargs)
         self.result_queue = result_queue
-        self.all_services = _load_services()
+        self.all_services = [s for s in _load_services_from_config() if s.get("enabled", True)]
         self.cards: dict[str, ServiceCard] = {}
         self._selected: set[str] = {s["id"] for s in self.all_services}
         self._running = False
@@ -187,3 +172,17 @@ class FullCheckTab(ctk.CTkFrame):
             self.verdict_score.configure(
                 text=f"{msg['score']}/10", text_color=color
             )
+
+    def reload_services(self):
+        """Called by app.py after settings are saved."""
+        self.all_services = [s for s in _load_services_from_config() if s.get("enabled", True)]
+        self._selected = {s["id"] for s in self.all_services}
+        self._rebuild_sidebar_checkboxes()
+        self._build_all_cards()
+
+    def _rebuild_sidebar_checkboxes(self):
+        """Rebuild sidebar after service list changes."""
+        for w in self._sidebar_scroll.winfo_children():
+            w.destroy()
+        self._checkboxes.clear()
+        self._populate_sidebar(self._sidebar_scroll)

@@ -8,7 +8,8 @@
       "url": "https://api.anthropic.com",
       "check_url": "https://api.anthropic.com/v1/messages",
       "check_type": "ai_region",
-      "port": 443
+      "port": 443,
+      "enabled": true
     },
     {
       "id": "chatgpt",
@@ -18,7 +19,8 @@
       "url": "https://api.openai.com",
       "check_url": "https://api.openai.com/v1/models",
       "check_type": "ai_region",
-      "port": 443
+      "port": 443,
+      "enabled": true
     },
     {
       "id": "gemini",
@@ -28,7 +30,8 @@
       "url": "https://generativelanguage.googleapis.com",
       "check_url": "https://generativelanguage.googleapis.com/v1/models",
       "check_type": "ai_region",
-      "port": 443
+      "port": 443,
+      "enabled": true
     },
     {
       "id": "youtube",
@@ -38,7 +41,8 @@
       "url": "https://www.youtube.com",
       "check_url": "https://www.youtube.com",
       "check_type": "http",
-      "port": 443
+      "port": 443,
+      "enabled": true
     },
     {
       "id": "twitch",
@@ -48,7 +52,8 @@
       "url": "https://www.twitch.tv",
       "check_url": "https://www.twitch.tv",
       "check_type": "http",
-      "port": 443
+      "port": 443,
+      "enabled": true
     },
     {
       "id": "instagram",
@@ -58,7 +63,8 @@
       "url": "https://www.instagram.com",
       "check_url": "https://www.instagram.com",
       "check_type": "http",
-      "port": 443
+      "port": 443,
+      "enabled": true
     },
     {
       "id": "vk",
@@ -68,7 +74,8 @@
       "url": "https://vk.com",
       "check_url": "https://vk.com",
       "check_type": "http",
-      "port": 443
+      "port": 443,
+      "enabled": true
     },
     {
       "id": "telegram",
@@ -78,7 +85,8 @@
       "url": "https://telegram.org",
       "check_url": "https://telegram.org",
       "check_type": "http",
-      "port": 443
+      "port": 443,
+      "enabled": true
     },
     {
       "id": "github",
@@ -88,7 +96,8 @@
       "url": "https://github.com",
       "check_url": "https://github.com",
       "check_type": "http",
-      "port": 443
+      "port": 443,
+      "enabled": true
     },
     {
       "id": "discord",
@@ -98,7 +107,8 @@
       "url": "https://discord.com",
       "check_url": "https://discord.com",
       "check_type": "http",
-      "port": 443
+      "port": 443,
+      "enabled": true
     },
     {
       "id": "vrchat",
@@ -108,7 +118,8 @@
       "url": "https://vrchat.com",
       "check_url": "https://vrchat.com",
       "check_type": "http",
-      "port": 443
+      "port": 443,
+      "enabled": true
     },
     {
       "id": "vrcdn",
@@ -118,7 +129,8 @@
       "url": "https://vrcdn.live",
       "check_url": "https://vrcdn.live",
       "check_type": "http",
-      "port": 443
+      "port": 443,
+      "enabled": true
     }
   ]
 }
