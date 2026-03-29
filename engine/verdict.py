@@ -60,10 +60,10 @@ def compute_verdict(services: list[dict]) -> VerdictResult:
         )
 
     total = len(services)
-    points = sum(score_service(s["accessible"], s.get("ping_ms"), s.get("loss_pct", 0.0))
+    points = sum(score_service(s.get("accessible", False), s.get("ping_ms"), s.get("loss_pct"))
                  for s in services)
     score = round((points / total) * 10, 1)
-    accessible_count = sum(1 for s in services if s["accessible"])
+    accessible_count = sum(1 for s in services if s.get("accessible", False))
 
     if score >= 9:
         tier = "S"
