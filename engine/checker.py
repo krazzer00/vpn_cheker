@@ -6,7 +6,7 @@ from urllib.parse import urlparse
 
 from engine.ping import ping_host
 from engine.http_check import http_check, ai_region_check
-from engine.speedtest import run_speedtest
+from engine.speedtest import run_speedtest_streaming
 from engine.verdict import compute_verdict
 
 
@@ -50,16 +50,14 @@ def run_checks(services: list[dict], result_queue: queue.Queue) -> None:
     """
     service_results = []
     lock = threading.Lock()
-    speed_data: dict = {}
-
     if not services:
         result_queue.put({"type": "verdict", **compute_verdict([])})
         return
 
-    def speedtest_worker() -> None:
-        speed_data.update(run_speedtest())
-
-    speed_thread = threading.Thread(target=speedtest_worker, daemon=True)
+    # Speedtest streams live "speed" messages directly into result_queue
+    speed_thread = threading.Thread(
+        target=run_speedtest_streaming, args=(result_queue,), daemon=True
+    )
     speed_thread.start()
 
     with ThreadPoolExecutor(max_workers=min(len(services), 8)) as pool:
@@ -88,10 +86,8 @@ def run_checks(services: list[dict], result_queue: queue.Queue) -> None:
             with lock:
                 service_results.append(result)
 
-    # Wait for speedtest before emitting speed + verdict together
+    # Wait for speedtest to finish, then emit verdict last
     speed_thread.join()
-    if speed_data:
-        result_queue.put({"type": "speed", **speed_data})
     result_queue.put({"type": "verdict", **compute_verdict(service_results)})
 
 

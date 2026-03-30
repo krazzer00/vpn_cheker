@@ -83,6 +83,8 @@ class SpeedBar(QFrame):
         layout.addLayout(wrapper)
 
     def update_speed(self, result: dict) -> None:
+        """Update only the fields present in result; None values are skipped
+        so live partial updates never overwrite already-shown values."""
         dl   = result.get("download_mbps")
         ul   = result.get("upload_mbps")
         ping = result.get("ping_ms")
@@ -94,22 +96,12 @@ class SpeedBar(QFrame):
                 f"font-size: 22px; font-weight: bold;"
                 f" color: {_speed_color(dl, ok=50, warn=15)}; background: transparent;"
             )
-        else:
-            self.dl_val.setText("N/A")
-            self.dl_val.setStyleSheet(
-                f"font-size: 22px; font-weight: bold; color: {COLOR_MUTED}; background: transparent;"
-            )
 
         if ul is not None:
             self.ul_val.setText(str(ul))
             self.ul_val.setStyleSheet(
                 f"font-size: 22px; font-weight: bold;"
                 f" color: {_speed_color(ul, ok=20, warn=5)}; background: transparent;"
-            )
-        else:
-            self.ul_val.setText("N/A")
-            self.ul_val.setStyleSheet(
-                f"font-size: 22px; font-weight: bold; color: {COLOR_MUTED}; background: transparent;"
             )
 
         if ping is not None:

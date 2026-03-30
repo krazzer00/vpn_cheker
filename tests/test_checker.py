@@ -11,8 +11,10 @@ def _fake_http(url):
 def _fake_ai(url):
     return {"region_accessible": True, "status_code": 401, "error": None}
 
-def _fake_speed():
-    return {"download_mbps": 90.0, "upload_mbps": 45.0, "ping_ms": 15.0, "error": None}
+def _fake_speed_streaming(result_queue):
+    result_queue.put({"type": "speed",
+                      "download_mbps": 90.0, "upload_mbps": 45.0,
+                      "ping_ms": 15.0, "loss_pct": 0.0, "error": None})
 
 def test_run_checks_puts_results_in_queue():
     q = queue.Queue()
@@ -23,7 +25,7 @@ def test_run_checks_puts_results_in_queue():
     ]
     with patch("engine.checker.ping_host", side_effect=_fake_ping), \
          patch("engine.checker.http_check", side_effect=_fake_http), \
-         patch("engine.checker.run_speedtest", side_effect=_fake_speed):
+         patch("engine.checker.run_speedtest_streaming", side_effect=_fake_speed_streaming):
         run_checks(services, q)
 
     results = []
@@ -44,7 +46,7 @@ def test_run_checks_sends_verdict():
     ]
     with patch("engine.checker.ping_host", side_effect=_fake_ping), \
          patch("engine.checker.http_check", side_effect=_fake_http), \
-         patch("engine.checker.run_speedtest", side_effect=_fake_speed):
+         patch("engine.checker.run_speedtest_streaming", side_effect=_fake_speed_streaming):
         run_checks(services, q)
 
     all_msgs = []
