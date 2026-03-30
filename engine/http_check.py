@@ -3,6 +3,7 @@ import time
 from typing import TypedDict
 
 import requests
+from engine.proxy import requests_proxies
 
 HTTP_TIMEOUT = 5
 AI_TIMEOUT = 8  # AI endpoints are slower to respond with auth errors
@@ -32,7 +33,8 @@ def http_check(url: str) -> HttpResult:
     try:
         start = time.perf_counter()
         r = requests.head(url, timeout=HTTP_TIMEOUT, allow_redirects=True,
-                          headers={"User-Agent": "VPNChecker/1.0"})
+                          headers={"User-Agent": "VPNChecker/1.0"},
+                          proxies=requests_proxies())
         elapsed = (time.perf_counter() - start) * 1000
         return HttpResult(
             accessible=r.status_code < 500,
@@ -57,7 +59,8 @@ def ai_region_check(check_url: str) -> AiRegionResult:
     """
     try:
         r = requests.get(check_url, timeout=AI_TIMEOUT,
-                         headers={"User-Agent": "VPNChecker/1.0"})
+                         headers={"User-Agent": "VPNChecker/1.0"},
+                         proxies=requests_proxies())
         return AiRegionResult(
             region_accessible=r.status_code in _REACHABLE_STATUSES,
             status_code=r.status_code,

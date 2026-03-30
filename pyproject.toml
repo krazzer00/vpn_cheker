@@ -6,6 +6,7 @@ dependencies = [
     "PyQt5==5.15.9",
     "ping3>=4.0.0",
     "requests>=2.31.0",
+    "PySocks>=1.7.1",
 ]
 
 [project.optional-dependencies]

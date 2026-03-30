@@ -104,6 +104,28 @@ class VpnCheckerApp(QMainWindow):
 
         hl.addStretch()
 
+        # ── SOCKS5 proxy toggle ───────────────────────────────────────────────
+        self._proxy_btn = QPushButton("SOCKS5")
+        self._proxy_btn.setCheckable(True)
+        self._proxy_btn.setFixedHeight(28)
+        self._proxy_btn.setToolTip("Направить трафик через 127.0.0.1:2080")
+        self._proxy_btn.setStyleSheet("""
+            QPushButton {
+                background: transparent; color: #555566;
+                border: 1px solid #333344; border-radius: 6px;
+                font-size: 11px; padding: 0 12px;
+            }
+            QPushButton:hover { color: #aaaacc; border-color: #555577; }
+            QPushButton:checked {
+                background: #1a2e1a; color: #4CAF50;
+                border: 1px solid #4CAF50; font-weight: bold;
+            }
+            QPushButton:checked:hover { background: #1e3e1e; }
+        """)
+        self._proxy_btn.toggled.connect(self._on_proxy_toggle)
+        hl.addWidget(self._proxy_btn)
+        hl.addSpacing(8)
+
         # ── IP badge ──────────────────────────────────────────────────────────
         ip_badge = QFrame()
         ip_badge.setStyleSheet(
@@ -228,6 +250,10 @@ class VpnCheckerApp(QMainWindow):
         self.history_tab.refresh()
         # Refresh IP/location after each check (VPN may have changed)
         self._fetch_ip_async()
+
+    def _on_proxy_toggle(self, checked: bool) -> None:
+        from engine.proxy import set_enabled
+        set_enabled(checked)
 
     def _on_settings_saved(self) -> None:
         self.full_tab.reload_services()

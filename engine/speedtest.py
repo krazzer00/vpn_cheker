@@ -48,11 +48,14 @@ def run_speedtest_streaming(result_queue: queue.Queue) -> None:
                           "error": str(e)})
         return
 
+    from engine.proxy import is_enabled, socks5_host, socks5_port
     cmd = [exe,
            "--format=jsonl",
            "--accept-license",
            "--accept-gdpr",
            "--progress=yes"]
+    if is_enabled():
+        cmd.append(f"--proxy=socks5://{socks5_host()}:{socks5_port()}")
 
     creation_flags = 0
     if sys.platform == "win32":
