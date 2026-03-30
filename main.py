@@ -27,6 +27,9 @@ def _apply_dark_palette(app: QApplication) -> None:
 
 
 if __name__ == "__main__":
+    from engine.dns import install as _install_dns
+    _install_dns()   # all socket DNS lookups now go through 8.8.8.8 / 1.1.1.1
+
     app = QApplication(sys.argv)
     app.setFont(QFont("Segoe UI", 10))
     _apply_dark_palette(app)
