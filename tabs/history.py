@@ -1,10 +1,12 @@
 # tabs/history.py
+import theme
+from theme import COLOR_MUTED, TIER_COLORS
+
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                               QPushButton, QFrame, QScrollArea)
 from PyQt5.QtCore import Qt
 
 from engine.history import load_history, clear_history
-from theme import DARK_BG, DARKER_BG, CARD_BG, BORDER, COLOR_MUTED, TIER_COLORS
 
 
 class HistoryTab(QWidget):
@@ -14,7 +16,7 @@ class HistoryTab(QWidget):
         self.refresh()
 
     def _build(self) -> None:
-        self.setStyleSheet(f"background: {DARK_BG};")
+        self.setStyleSheet(f"background: {theme.DARK_BG};")
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
@@ -23,8 +25,8 @@ class HistoryTab(QWidget):
         top = QFrame()
         top.setFixedHeight(48)
         top.setStyleSheet(
-            f"QFrame {{ background: {DARKER_BG}; border-bottom: 1px solid {BORDER};"
-            f" border-radius: 0; }}"
+            f"QFrame {{ background: {theme.DARKER_BG};"
+            f" border-bottom: 1px solid {theme.BORDER}; border-radius: 0; }}"
         )
         top_layout = QHBoxLayout(top)
         top_layout.setContentsMargins(16, 0, 12, 0)
@@ -54,9 +56,9 @@ class HistoryTab(QWidget):
         self._scroll.setWidgetResizable(True)
         self._scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self._scroll.setStyleSheet(
-            f"QScrollArea {{ background: {DARK_BG}; border: none; }}"
+            f"QScrollArea {{ background: {theme.DARK_BG}; border: none; }}"
         )
-        self._scroll.viewport().setStyleSheet(f"background: {DARK_BG};")
+        self._scroll.viewport().setStyleSheet(f"background: {theme.DARK_BG};")
         layout.addWidget(self._scroll, 1)
 
     def refresh(self) -> None:
@@ -65,7 +67,7 @@ class HistoryTab(QWidget):
             old.deleteLater()
 
         content = QWidget()
-        content.setStyleSheet(f"background: {DARK_BG};")
+        content.setStyleSheet(f"background: {theme.DARK_BG};")
         vlay = QVBoxLayout(content)
         vlay.setContentsMargins(14, 10, 14, 10)
         vlay.setSpacing(4)
@@ -97,7 +99,7 @@ class HistoryTab(QWidget):
         row = QFrame()
         row.setFixedHeight(88)
         row.setStyleSheet(
-            f"QFrame {{ background: {CARD_BG}; border: 1px solid {BORDER};"
+            f"QFrame {{ background: {theme.CARD_BG}; border: 1px solid {theme.BORDER};"
             f" border-radius: 10px; }}"
         )
 
@@ -105,7 +107,7 @@ class HistoryTab(QWidget):
         row_layout.setContentsMargins(0, 0, 16, 0)
         row_layout.setSpacing(0)
 
-        # Left tier color strip
+        # Tier color accent strip
         accent = QFrame()
         accent.setFixedWidth(4)
         accent.setStyleSheet(
@@ -128,15 +130,13 @@ class HistoryTab(QWidget):
         header_lbl.setStyleSheet(
             f"font-size: 10px; color: {COLOR_MUTED}; background: transparent;"
         )
-
         msg_lbl = QLabel(record.get("message", ""))
         msg_lbl.setStyleSheet(
             f"font-size: 13px; font-weight: bold; color: {tier_color}; background: transparent;"
         )
-
         accessible = record.get("accessible_count", 0)
-        total = record.get("total_count", 0)
-        count_lbl = QLabel(f"Доступно {accessible} из {total} сервисов")
+        total      = record.get("total_count", 0)
+        count_lbl  = QLabel(f"Доступно {accessible} из {total} сервисов")
         count_lbl.setStyleSheet(
             f"font-size: 11px; color: {COLOR_MUTED}; background: transparent;"
         )
@@ -146,7 +146,6 @@ class HistoryTab(QWidget):
         cl.addWidget(count_lbl)
         row_layout.addWidget(content, 1)
 
-        # Score
         score_lbl = QLabel(f"{record.get('score', 0)}/10")
         score_lbl.setStyleSheet(
             f"font-size: 28px; font-weight: bold; color: {tier_color}; background: transparent;"

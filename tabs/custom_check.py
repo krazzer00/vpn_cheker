@@ -3,13 +3,15 @@ import queue
 import threading
 from urllib.parse import urlparse
 
+import theme
+from theme import COLOR_OK, COLOR_BAD, COLOR_WARN, COLOR_MUTED
+
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
-                              QPushButton, QLineEdit, QFrame, QSizePolicy)
+                              QPushButton, QLineEdit, QFrame)
 from PyQt5.QtCore import Qt, pyqtSignal
 
 from engine.ping import ping_host
 from engine.http_check import http_check
-from theme import DARK_BG, BORDER, ACCENT, COLOR_OK, COLOR_BAD, COLOR_WARN, COLOR_MUTED, CARD_BG
 
 
 class CustomCheckTab(QWidget):
@@ -23,7 +25,7 @@ class CustomCheckTab(QWidget):
         self._check_done.connect(self._on_done)
 
     def _build(self) -> None:
-        self.setStyleSheet(f"background: {DARK_BG};")
+        self.setStyleSheet(f"background: {theme.DARK_BG};")
         outer = QVBoxLayout(self)
         outer.setAlignment(Qt.AlignCenter)
 
@@ -60,11 +62,11 @@ class CustomCheckTab(QWidget):
         self.url_entry.setFixedHeight(40)
         self.url_entry.setStyleSheet(f"""
             QLineEdit {{
-                background: {CARD_BG}; color: #cccccc;
-                border: 1px solid {BORDER}; border-radius: 8px;
+                background: {theme.CARD_BG}; color: #cccccc;
+                border: 1px solid {theme.BORDER}; border-radius: 8px;
                 padding: 4px 12px; font-size: 13px;
             }}
-            QLineEdit:focus {{ border-color: {ACCENT}; }}
+            QLineEdit:focus {{ border-color: {theme.ACCENT}; }}
         """)
         self.url_entry.returnPressed.connect(self._start_check)
 
@@ -72,11 +74,11 @@ class CustomCheckTab(QWidget):
         self.check_btn.setFixedSize(120, 40)
         self.check_btn.setStyleSheet(f"""
             QPushButton {{
-                background: {ACCENT}; color: white; border: none;
+                background: {theme.ACCENT}; color: white; border: none;
                 border-radius: 8px; font-size: 13px; font-weight: bold;
             }}
-            QPushButton:hover {{ background: #7b8ef5; }}
-            QPushButton:disabled {{ background: #2a2a3a; color: {COLOR_MUTED}; }}
+            QPushButton:hover {{ background: {theme._lighten(theme.ACCENT)}; }}
+            QPushButton:disabled {{ background: {theme.BORDER}; color: {COLOR_MUTED}; }}
         """)
         self.check_btn.clicked.connect(self._start_check)
 
@@ -88,7 +90,7 @@ class CustomCheckTab(QWidget):
         # Result card
         self.result_frame = QFrame()
         self.result_frame.setStyleSheet(
-            f"QFrame {{ background: {CARD_BG}; border: 1px solid {BORDER};"
+            f"QFrame {{ background: {theme.CARD_BG}; border: 1px solid {theme.BORDER};"
             f" border-radius: 12px; }}"
         )
         self.result_frame.setMinimumHeight(80)
@@ -131,26 +133,23 @@ class CustomCheckTab(QWidget):
         self.check_btn.setText("Проверить")
 
     def _show_result(self, ping_result: dict, http_result: dict, url: str) -> None:
-        # Clear result frame
         while self._result_layout.count():
             item = self._result_layout.takeAt(0)
             if item.widget():
                 item.widget().deleteLater()
 
         accessible = http_result["accessible"]
-        ping_ms = ping_result.get("ping_ms")
-        loss_pct = ping_result.get("loss_pct")
+        ping_ms    = ping_result.get("ping_ms")
+        loss_pct   = ping_result.get("loss_pct")
 
         color = COLOR_OK if accessible else COLOR_BAD
-        status_text = "Доступен ✓" if accessible else "Недоступен ✗"
 
-        # Top row: URL + status
         top_row = QHBoxLayout()
         url_lbl = QLabel(url)
         url_lbl.setStyleSheet(
             "font-size: 13px; font-weight: bold; color: #cccccc; background: transparent;"
         )
-        status_lbl = QLabel(status_text)
+        status_lbl = QLabel("Доступен ✓" if accessible else "Недоступен ✗")
         status_lbl.setStyleSheet(
             f"font-size: 12px; font-weight: bold; color: {color}; background: transparent;"
         )
@@ -162,7 +161,6 @@ class CustomCheckTab(QWidget):
         top_w.setLayout(top_row)
         self._result_layout.addWidget(top_w)
 
-        # Stats row
         stats = QHBoxLayout()
         stats.setAlignment(Qt.AlignLeft)
         stats.setSpacing(0)
@@ -170,8 +168,7 @@ class CustomCheckTab(QWidget):
         ping_color = (COLOR_OK if ping_ms and ping_ms < 100
                       else (COLOR_WARN if ping_ms else COLOR_BAD))
         self._add_stat(stats, "ПИНГ",
-                       f"{ping_ms:.0f} ms" if ping_ms is not None else "—",
-                       ping_color)
+                       f"{ping_ms:.0f} ms" if ping_ms is not None else "—", ping_color)
 
         if loss_pct is None:
             self._add_stat(stats, "ПОТЕРИ", "н/п", COLOR_MUTED)
@@ -190,8 +187,7 @@ class CustomCheckTab(QWidget):
         stats_w.setLayout(stats)
         self._result_layout.addWidget(stats_w)
 
-    def _add_stat(self, layout: QHBoxLayout, label: str,
-                  value: str, color: str = "#e0e0e0") -> None:
+    def _add_stat(self, layout, label: str, value: str, color: str = "#e0e0e0") -> None:
         col = QVBoxLayout()
         col.setSpacing(0)
         col.setContentsMargins(0, 0, 24, 0)
@@ -211,4 +207,4 @@ class CustomCheckTab(QWidget):
         layout.addWidget(w)
 
     def handle_result(self, msg: dict) -> None:
-        pass  # Custom tab uses its own worker thread, not the shared queue
+        pass

@@ -3,6 +3,9 @@ import queue
 import threading
 from typing import Optional, Callable
 
+import theme
+from theme import COLOR_MUTED, TIER_COLORS
+
 from PyQt5.QtWidgets import (QWidget, QHBoxLayout, QVBoxLayout, QLabel,
                               QPushButton, QFrame, QScrollArea, QGridLayout,
                               QCheckBox, QSizePolicy)
@@ -12,7 +15,6 @@ from engine.checker import run_checks
 from engine.config import load_services as _load_services_from_config
 from widgets.service_card import ServiceCard
 from widgets.speed_bar import SpeedBar
-from theme import DARK_BG, DARKER_BG, BORDER, ACCENT, COLOR_MUTED, TIER_COLORS, CARD_BG
 
 
 class FullCheckTab(QWidget):
@@ -54,7 +56,8 @@ class FullCheckTab(QWidget):
         sidebar = QFrame()
         sidebar.setFixedWidth(220)
         sidebar.setStyleSheet(
-            f"QFrame {{ background: {DARKER_BG}; border-right: 1px solid {BORDER}; border-radius: 0; }}"
+            f"QFrame {{ background: {theme.DARKER_BG};"
+            f" border-right: 1px solid {theme.BORDER}; border-radius: 0; }}"
         )
         sidebar_layout = QVBoxLayout(sidebar)
         sidebar_layout.setContentsMargins(0, 0, 0, 0)
@@ -64,22 +67,21 @@ class FullCheckTab(QWidget):
         self._sidebar_scroll.setWidgetResizable(True)
         self._sidebar_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self._sidebar_scroll.setStyleSheet(
-            f"QScrollArea {{ background: {DARKER_BG}; border: none; }}"
+            f"QScrollArea {{ background: {theme.DARKER_BG}; border: none; }}"
         )
-        self._sidebar_scroll.viewport().setStyleSheet(f"background: {DARKER_BG};")
-
+        self._sidebar_scroll.viewport().setStyleSheet(f"background: {theme.DARKER_BG};")
         sidebar_layout.addWidget(self._sidebar_scroll, 1)
 
         self.run_btn = QPushButton("▶  Запустить")
         self.run_btn.setFixedHeight(40)
         self.run_btn.setStyleSheet(f"""
             QPushButton {{
-                background: {ACCENT}; color: white; border: none;
+                background: {theme.ACCENT}; color: white; border: none;
                 border-radius: 9px; font-size: 13px; font-weight: bold;
                 margin: 10px;
             }}
-            QPushButton:hover {{ background: #7b8ef5; }}
-            QPushButton:disabled {{ background: #2a2a3a; color: {COLOR_MUTED}; margin: 10px; }}
+            QPushButton:hover {{ background: {theme._lighten(theme.ACCENT)}; }}
+            QPushButton:disabled {{ background: {theme.BORDER}; color: {COLOR_MUTED}; margin: 10px; }}
         """)
         self.run_btn.clicked.connect(self._start_check)
         sidebar_layout.addWidget(self.run_btn)
@@ -88,7 +90,7 @@ class FullCheckTab(QWidget):
 
         # ── Right panel ───────────────────────────────────────────────────────
         right = QWidget()
-        right.setStyleSheet(f"background: {DARK_BG};")
+        right.setStyleSheet(f"background: {theme.DARK_BG};")
         right_layout = QVBoxLayout(right)
         right_layout.setContentsMargins(14, 14, 14, 14)
         right_layout.setSpacing(8)
@@ -100,9 +102,9 @@ class FullCheckTab(QWidget):
         self._cards_scroll.setWidgetResizable(True)
         self._cards_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self._cards_scroll.setStyleSheet(
-            f"QScrollArea {{ background: {DARK_BG}; border: none; }}"
+            f"QScrollArea {{ background: {theme.DARK_BG}; border: none; }}"
         )
-        self._cards_scroll.viewport().setStyleSheet(f"background: {DARK_BG};")
+        self._cards_scroll.viewport().setStyleSheet(f"background: {theme.DARK_BG};")
         right_layout.addWidget(self._cards_scroll, 1)
 
         self._build_verdict(right_layout)
@@ -116,7 +118,7 @@ class FullCheckTab(QWidget):
             old.deleteLater()
 
         content = QWidget()
-        content.setStyleSheet(f"background: {DARKER_BG};")
+        content.setStyleSheet(f"background: {theme.DARKER_BG};")
         vlay = QVBoxLayout(content)
         vlay.setContentsMargins(8, 8, 8, 8)
         vlay.setSpacing(2)
@@ -143,11 +145,11 @@ class FullCheckTab(QWidget):
                     }}
                     QCheckBox::indicator {{
                         width: 16px; height: 16px;
-                        border: 1px solid {BORDER}; border-radius: 3px;
-                        background: #111118;
+                        border: 1px solid {theme.BORDER}; border-radius: 3px;
+                        background: {theme.DARKER_BG};
                     }}
                     QCheckBox::indicator:checked {{
-                        background: {ACCENT}; border-color: {ACCENT};
+                        background: {theme.ACCENT}; border-color: {theme.ACCENT};
                     }}
                 """)
                 sid = svc["id"]
@@ -161,7 +163,7 @@ class FullCheckTab(QWidget):
     def _build_verdict(self, parent_layout: QVBoxLayout) -> None:
         self.verdict_frame = QFrame()
         self.verdict_frame.setStyleSheet(
-            f"QFrame {{ background: {CARD_BG}; border: 1px solid {BORDER};"
+            f"QFrame {{ background: {theme.CARD_BG}; border: 1px solid {theme.BORDER};"
             f" border-radius: 10px; }}"
         )
         self.verdict_frame.setFixedHeight(80)
@@ -207,7 +209,7 @@ class FullCheckTab(QWidget):
             old.deleteLater()
 
         content = QWidget()
-        content.setStyleSheet(f"background: {DARK_BG};")
+        content.setStyleSheet(f"background: {theme.DARK_BG};")
         vlay = QVBoxLayout(content)
         vlay.setContentsMargins(0, 0, 0, 0)
         vlay.setSpacing(0)
@@ -216,6 +218,8 @@ class FullCheckTab(QWidget):
         categories: dict[str, list] = {}
         for svc in self.all_services:
             categories.setdefault(svc["category"], []).append(svc)
+
+        self._grid_widgets: list[tuple[QWidget, QGridLayout]] = []
 
         for cat, services in categories.items():
             lbl = QLabel(cat.upper())
@@ -226,7 +230,7 @@ class FullCheckTab(QWidget):
             vlay.addWidget(lbl)
 
             grid_w = QWidget()
-            grid_w.setStyleSheet(f"background: {DARK_BG};")
+            grid_w.setStyleSheet(f"background: {theme.DARK_BG};")
             grid = QGridLayout(grid_w)
             grid.setContentsMargins(0, 0, 0, 0)
             grid.setSpacing(8)
@@ -240,16 +244,35 @@ class FullCheckTab(QWidget):
                 grid.setColumnStretch(col, 1)
 
             vlay.addWidget(grid_w)
+            self._grid_widgets.append((grid_w, grid))
 
         vlay.addStretch()
         self._cards_scroll.setWidget(content)
         self._refresh_card_visibility()
+        self._update_card_sizes()
 
     def _refresh_card_visibility(self) -> None:
         for svc in self.all_services:
             card = self.cards.get(svc["id"])
             if card:
                 card.setVisible(svc["id"] in self._selected)
+
+    # ── Responsive card scaling ────────────────────────────────────────────────
+
+    def resizeEvent(self, event) -> None:
+        super().resizeEvent(event)
+        self._update_card_sizes()
+
+    def _update_card_sizes(self) -> None:
+        if not self.cards:
+            return
+        # right panel = total width - sidebar (220) - right panel margins (14+14)
+        content_w = max(120, self.width() - 220 - 28)
+        # 3 columns with 8px gap on each side of gaps = 2×8=16px total gap
+        col_w = max(120, (content_w - 16) // 3)
+        card_h = max(100, int(col_w * 0.38))
+        for card in self.cards.values():
+            card.setFixedHeight(card_h)
 
     # ── Interaction ────────────────────────────────────────────────────────────
 

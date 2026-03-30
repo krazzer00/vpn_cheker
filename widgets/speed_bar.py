@@ -1,8 +1,9 @@
 # widgets/speed_bar.py
+import theme
+from theme import COLOR_MUTED, COLOR_OK, COLOR_WARN, COLOR_BAD
+
 from PyQt5.QtWidgets import QFrame, QHBoxLayout, QVBoxLayout, QLabel
 from PyQt5.QtCore import Qt
-
-from theme import DARKER_BG, BORDER, COLOR_MUTED, COLOR_OK, COLOR_WARN, COLOR_BAD
 
 
 def _speed_color(mbps, ok=50, warn=15):
@@ -21,7 +22,7 @@ class SpeedBar(QFrame):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setStyleSheet(
-            f"QFrame {{ background: {DARKER_BG}; border: 1px solid {BORDER};"
+            f"QFrame {{ background: {theme.DARKER_BG}; border: 1px solid {theme.BORDER};"
             f" border-radius: 10px; }}"
         )
         self.setFixedHeight(76)
@@ -32,24 +33,23 @@ class SpeedBar(QFrame):
         row.setContentsMargins(4, 0, 4, 0)
         row.setSpacing(0)
 
-        self.ping_val  = self._item(row, "⊙  ПИНГ",     "—", "мс")
+        self.ping_val = self._item(row, "⊙  ПИНГ",    "—", "мс")
         self._divider(row)
-        self.dl_val    = self._item(row, "↓  ЗАГРУЗКА",  "—", "Мб/с")
+        self.dl_val   = self._item(row, "↓  ЗАГРУЗКА", "—", "Мб/с")
         self._divider(row)
-        self.ul_val    = self._item(row, "↑  ВЫГРУЗКА",  "—", "Мб/с")
+        self.ul_val   = self._item(row, "↑  ВЫГРУЗКА", "—", "Мб/с")
         self._divider(row)
-        self.loss_val  = self._item(row, "◈  ПОТЕРИ",    "—", "%")
+        self.loss_val = self._item(row, "◈  ПОТЕРИ",   "—", "%")
         row.addStretch()
 
-    def _item(self, layout: QHBoxLayout, label: str, value: str, unit: str) -> QLabel:
+    def _item(self, layout, label: str, value: str, unit: str) -> QLabel:
         block = QVBoxLayout()
         block.setSpacing(1)
         block.setContentsMargins(22, 10, 0, 10)
 
         title_lbl = QLabel(label)
         title_lbl.setStyleSheet(
-            f"font-size: 9px; font-weight: bold; color: {COLOR_MUTED};"
-            " background: transparent;"
+            f"font-size: 9px; font-weight: bold; color: {COLOR_MUTED}; background: transparent;"
         )
 
         val_row = QHBoxLayout()
@@ -61,9 +61,7 @@ class SpeedBar(QFrame):
             "font-size: 22px; font-weight: bold; color: #ccccdd; background: transparent;"
         )
         unit_lbl = QLabel(f" {unit}")
-        unit_lbl.setStyleSheet(
-            "font-size: 11px; color: #44445a; background: transparent;"
-        )
+        unit_lbl.setStyleSheet("font-size: 11px; color: #44445a; background: transparent;")
         unit_lbl.setAlignment(Qt.AlignBottom)
 
         val_row.addWidget(val)
@@ -74,11 +72,11 @@ class SpeedBar(QFrame):
         layout.addLayout(block)
         return val
 
-    def _divider(self, layout: QHBoxLayout) -> None:
+    def _divider(self, layout) -> None:
         div = QFrame()
         div.setFrameShape(QFrame.VLine)
         div.setFixedWidth(1)
-        div.setStyleSheet(f"background: {BORDER}; border: none;")
+        div.setStyleSheet(f"background: {theme.BORDER}; border: none;")
         wrapper = QVBoxLayout()
         wrapper.setContentsMargins(8, 10, 0, 10)
         wrapper.addWidget(div)
