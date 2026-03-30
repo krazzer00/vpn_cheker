@@ -4,6 +4,7 @@ from typing import Callable, Optional
 import customtkinter as ctk
 
 from engine.config import load_services, save_services
+from widgets.smooth_scroll import apply_smooth_scroll
 from theme import (DARK_BG, DARKER_BG, CARD_BG, BORDER,
                    COLOR_OK, COLOR_BAD, COLOR_MUTED, ACCENT)
 
@@ -57,6 +58,7 @@ class SettingsTab(ctk.CTkFrame):
 
         self._scroll = ctk.CTkScrollableFrame(self, fg_color="transparent")
         self._scroll.pack(fill="both", expand=True, padx=14, pady=(0, 10))
+        apply_smooth_scroll(self._scroll)
 
     def _load(self):
         for w in self._scroll.winfo_children():

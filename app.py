@@ -17,12 +17,13 @@ class VpnCheckerApp(ctk.CTk):
     def __init__(self):
         super().__init__()
         self.title("VPN Checker")
-        self.geometry("1200x760")
-        self.minsize(900, 600)
+        self.geometry("1280x820")
+        self.minsize(960, 640)
         self.configure(fg_color=DARK_BG)
 
         self.result_queue: queue.Queue = queue.Queue()
         self._tab_refs: dict = {}  # keep refs to avoid GC
+        self._current_ip_info: str = ""
 
         self._build_titlebar()
         self._build_tabs()
@@ -103,7 +104,7 @@ class VpnCheckerApp(ctk.CTk):
     def _on_check_complete(self, verdict: dict, service_results: list[dict]):
         """Called by FullCheckTab after a check finishes. Saves to history."""
         from engine.history import save_result
-        save_result(verdict, service_results)
+        save_result(verdict, service_results, ip_info=self._current_ip_info)
         self.history_tab.refresh()
 
     def _on_settings_saved(self):
@@ -123,6 +124,7 @@ class VpnCheckerApp(ctk.CTk):
             country = d.get("country_name", "?")
             location = f"{city}, {country}" if city else country
             text = f"{ip} — {location}"
+            self._current_ip_info = text
             self.after(0, lambda: (
                 self.ip_label.configure(text=text, text_color="#9090cc"),
                 self.ip_dot.configure(text_color="#4CAF50"),

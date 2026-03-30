@@ -2,6 +2,7 @@
 import customtkinter as ctk
 from engine.history import load_history, clear_history
 from theme import DARK_BG, DARKER_BG, CARD_BG, BORDER, COLOR_MUTED, ACCENT, TIER_COLORS
+from widgets.smooth_scroll import apply_smooth_scroll
 
 
 class HistoryTab(ctk.CTkFrame):
@@ -27,6 +28,7 @@ class HistoryTab(ctk.CTkFrame):
 
         self._scroll = ctk.CTkScrollableFrame(self, fg_color="transparent")
         self._scroll.pack(fill="both", expand=True, padx=14, pady=10)
+        self._wheel_handler = apply_smooth_scroll(self._scroll)
 
     def refresh(self):
         """Reload and redraw history list."""
@@ -66,9 +68,11 @@ class HistoryTab(ctk.CTkFrame):
         left = ctk.CTkFrame(content, fg_color="transparent")
         left.pack(side="left", fill="both", expand=True)
 
-        # Timestamp + message
+        # Timestamp + IP info + message
         ts = record.get("timestamp", "?")
-        ctk.CTkLabel(left, text=ts,
+        ip_info = record.get("ip_info", "")
+        header = f"{ts}   •   {ip_info}" if ip_info else ts
+        ctk.CTkLabel(left, text=header,
                      font=("Segoe UI", 10), text_color=COLOR_MUTED).pack(anchor="w")
         ctk.CTkLabel(left, text=record.get("message", ""),
                      font=("Segoe UI", 13, "bold"),

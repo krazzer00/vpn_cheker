@@ -23,12 +23,14 @@ def load_history() -> list[dict]:
         return []
 
 
-def save_result(verdict: dict, service_results: list[dict]) -> None:
+def save_result(verdict: dict, service_results: list[dict],
+                ip_info: str = "") -> None:
     """Prepend a new check record. Truncates to _MAX_RECORDS."""
     _ensure_dir()
     records = load_history()
     record = {
         "timestamp": datetime.now().isoformat(timespec="seconds"),
+        "ip_info": ip_info,
         "score": verdict["score"],
         "tier": verdict["tier"],
         "message": verdict["message"],

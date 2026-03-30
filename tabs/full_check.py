@@ -10,6 +10,7 @@ from engine.config import load_services as _load_services_from_config
 from widgets.service_card import ServiceCard
 from widgets.speed_bar import SpeedBar
 from theme import DARK_BG, DARKER_BG, BORDER, ACCENT, COLOR_MUTED, TIER_COLORS, CARD_BG
+from widgets.smooth_scroll import apply_smooth_scroll
 
 
 class FullCheckTab(ctk.CTkFrame):
@@ -60,6 +61,7 @@ class FullCheckTab(ctk.CTkFrame):
         self._sidebar_scroll = ctk.CTkScrollableFrame(self.sidebar,
                                                         fg_color="transparent")
         self._sidebar_scroll.pack(fill="both", expand=True, padx=8, pady=8)
+        apply_smooth_scroll(self._sidebar_scroll)
         self._checkboxes: dict[str, ctk.CTkCheckBox] = {}
         self._populate_sidebar(self._sidebar_scroll)
 
@@ -82,6 +84,7 @@ class FullCheckTab(ctk.CTkFrame):
         # Cards area (scrollable)
         self._cards_container = ctk.CTkScrollableFrame(right, fg_color="transparent")
         self._cards_container.pack(fill="both", expand=True, padx=14)
+        apply_smooth_scroll(self._cards_container)
 
         # Verdict panel
         self._build_verdict(right)
