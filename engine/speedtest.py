@@ -1,25 +1,29 @@
 # engine/speedtest.py
 """
 Speed measurement via Cloudflare speed test endpoints.
-Per-worker sessions, streaming download, fixed-blob upload, timed windows.
+Ping = TCP-connect RTT (no TLS overhead).
+Download / upload = timed parallel streams, bytes-per-second.
 """
 import os
+import socket
 import time
 import threading
 from typing import TypedDict
 
 import requests
 
-_PING_URL = "https://speed.cloudflare.com/cdn-cgi/trace"
-_DL_URL   = "https://speed.cloudflare.com/__down?bytes=104857600"  # 100 MB ceiling
+# ── constants ──────────────────────────────────────────────────────────────────
+
+_CF_HOST  = "speed.cloudflare.com"
+_DL_URL   = "https://speed.cloudflare.com/__down?bytes=26214400"  # 25 MB per request
 _UL_URL   = "https://speed.cloudflare.com/__up"
+_HDR      = {"User-Agent": "Mozilla/5.0 (VPNChecker/2.0)"}
 
 _THREADS  = 4
 _DL_SECS  = 8.0
 _UL_SECS  = 8.0
 _CHUNK    = 65_536
-_UL_BLOB  = 256 * 1024           # 256 KB per POST — works for 1 Mbps … 1 Gbps
-_HDR      = {"User-Agent": "VPNChecker/2.0"}
+_UL_BLOB  = 262_144   # 256 KB per POST — good from 1 Mbps to 1 Gbps
 
 
 class SpeedResult(TypedDict):
@@ -29,69 +33,71 @@ class SpeedResult(TypedDict):
     error:         str | None
 
 
-# ── ping ───────────────────────────────────────────────────────────────────────
+# ── ping (TCP connect, no TLS overhead) ────────────────────────────────────────
 
-def _measure_ping(samples: int = 5) -> float:
-    latencies: list[float] = []
+def _measure_ping(host: str = _CF_HOST, port: int = 443,
+                  samples: int = 6) -> float:
+    times: list[float] = []
     for _ in range(samples):
         try:
             t0 = time.perf_counter()
-            requests.get(_PING_URL, timeout=4, headers=_HDR)
-            latencies.append((time.perf_counter() - t0) * 1000)
+            with socket.create_connection((host, port), timeout=3):
+                pass
+            times.append((time.perf_counter() - t0) * 1000)
         except Exception:
             pass
-    if not latencies:
+    if not times:
         return 0.0
-    latencies.sort()
-    keep = latencies[:max(1, len(latencies) * 2 // 3)]  # drop slowest third
+    times.sort()
+    keep = times[:max(1, len(times) - 1)]   # drop single worst outlier
     return round(sum(keep) / len(keep), 1)
 
 
 # ── download ───────────────────────────────────────────────────────────────────
 
 def _dl_worker(results: list, idx: int, stop: threading.Event) -> None:
-    total = 0
-    try:
-        with requests.Session() as sess:
-            sess.headers.update(_HDR)
-            while not stop.is_set():
-                try:
-                    with sess.get(_DL_URL, stream=True, timeout=_DL_SECS + 10) as r:
-                        r.raise_for_status()
-                        for chunk in r.iter_content(_CHUNK):
-                            if stop.is_set():
-                                break
-                            total += len(chunk)
-                except Exception:
-                    break
-    except Exception:
-        pass
+    total  = 0
+    errors = 0
+    with requests.Session() as sess:
+        sess.headers.update(_HDR)
+        while not stop.is_set() and errors < 4:
+            try:
+                with sess.get(_DL_URL, stream=True, timeout=_DL_SECS + 10) as r:
+                    r.raise_for_status()
+                    for chunk in r.iter_content(_CHUNK):
+                        if stop.is_set():
+                            break
+                        total += len(chunk)
+                errors = 0
+            except Exception:
+                errors += 1
+                time.sleep(0.3)
     results[idx] = total
 
 
 # ── upload ─────────────────────────────────────────────────────────────────────
 
 def _ul_worker(results: list, idx: int, stop: threading.Event) -> None:
-    total = 0
-    blob = os.urandom(_UL_BLOB)
-    hdrs = {**_HDR,
-            "Content-Type":   "application/octet-stream",
-            "Content-Length": str(_UL_BLOB)}
-    try:
-        with requests.Session() as sess:
-            sess.headers.update(hdrs)
-            while not stop.is_set():
-                try:
-                    sess.post(_UL_URL, data=blob, timeout=_UL_SECS + 10)
-                    total += _UL_BLOB
-                except Exception:
-                    break
-    except Exception:
-        pass
+    total  = 0
+    errors = 0
+    blob   = os.urandom(_UL_BLOB)
+    hdrs   = {**_HDR,
+              "Content-Type":   "application/octet-stream",
+              "Content-Length": str(_UL_BLOB)}
+    with requests.Session() as sess:
+        sess.headers.update(hdrs)
+        while not stop.is_set() and errors < 4:
+            try:
+                sess.post(_UL_URL, data=blob, timeout=_UL_SECS + 10)
+                total += _UL_BLOB
+                errors = 0
+            except Exception:
+                errors += 1
+                time.sleep(0.3)
     results[idx] = total
 
 
-# ── timed parallel runner ──────────────────────────────────────────────────────
+# ── timed runner ───────────────────────────────────────────────────────────────
 
 def _run_timed(worker_fn, secs: float) -> float:
     stop    = threading.Event()
@@ -101,14 +107,17 @@ def _run_timed(worker_fn, secs: float) -> float:
         for i in range(_THREADS)
     ]
     t0 = time.perf_counter()
-    for t in threads:
+    # Stagger starts slightly so TCP handshakes don't all hit at once
+    for i, t in enumerate(threads):
         t.start()
+        if i < _THREADS - 1:
+            time.sleep(0.05)
     time.sleep(secs)
     stop.set()
     for t in threads:
-        t.join(secs + 15)
+        t.join(secs + 20)
     elapsed = max(time.perf_counter() - t0, 0.001)
-    return sum(results) / elapsed          # bytes / second
+    return sum(results) / elapsed   # bytes / second
 
 
 # ── public API ─────────────────────────────────────────────────────────────────

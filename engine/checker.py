@@ -43,20 +43,21 @@ def _check_one_service(service: dict) -> dict:
 
 def run_checks(services: list[dict], result_queue: queue.Queue) -> None:
     """
-    Run all service checks + speedtest in parallel.
-    Puts {type: "service", ...} and {type: "verdict", ...} into result_queue.
-    Also puts {type: "speed", ...} when speedtest completes.
+    Run service checks + speedtest in parallel.
+    Service card results stream into the queue immediately.
+    Speed result and verdict are emitted together only after speedtest finishes,
+    so the speed bar and final score always appear at the same time.
     """
     service_results = []
     lock = threading.Lock()
+    speed_data: dict = {}
 
     if not services:
         result_queue.put({"type": "verdict", **compute_verdict([])})
         return
 
-    def speedtest_worker():
-        speed = run_speedtest()
-        result_queue.put({"type": "speed", **speed})
+    def speedtest_worker() -> None:
+        speed_data.update(run_speedtest())
 
     speed_thread = threading.Thread(target=speedtest_worker, daemon=True)
     speed_thread.start()
@@ -87,8 +88,11 @@ def run_checks(services: list[dict], result_queue: queue.Queue) -> None:
             with lock:
                 service_results.append(result)
 
-    verdict = compute_verdict(service_results)
-    result_queue.put({"type": "verdict", **verdict})
+    # Wait for speedtest before emitting speed + verdict together
+    speed_thread.join()
+    if speed_data:
+        result_queue.put({"type": "speed", **speed_data})
+    result_queue.put({"type": "verdict", **compute_verdict(service_results)})
 
 
 def run_single_check(service: dict) -> dict:
