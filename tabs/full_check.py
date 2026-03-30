@@ -62,7 +62,7 @@ class FullCheckTab(ctk.CTkFrame):
         self._sidebar_scroll = ctk.CTkScrollableFrame(self.sidebar,
                                                         fg_color="transparent")
         self._sidebar_scroll.pack(fill="both", expand=True, padx=8, pady=8)
-        apply_smooth_scroll(self._sidebar_scroll)
+        self._sidebar_rebind = apply_smooth_scroll(self._sidebar_scroll)
         self._checkboxes: dict[str, ctk.CTkCheckBox] = {}
         self._populate_sidebar(self._sidebar_scroll)
 
@@ -85,7 +85,7 @@ class FullCheckTab(ctk.CTkFrame):
         # Cards area (scrollable)
         self._cards_container = ctk.CTkScrollableFrame(right, fg_color="transparent")
         self._cards_container.pack(fill="both", expand=True, padx=14)
-        apply_smooth_scroll(self._cards_container)
+        self._cards_rebind = apply_smooth_scroll(self._cards_container)
 
         # Verdict panel
         self._build_verdict(right)
@@ -116,6 +116,7 @@ class FullCheckTab(ctk.CTkFrame):
             w.destroy()
         self._checkboxes.clear()
         self._populate_sidebar(self._sidebar_scroll)
+        self._sidebar_rebind(self._sidebar_scroll)
 
     def _build_verdict(self, parent):
         self.verdict_frame = ctk.CTkFrame(parent, fg_color=CARD_BG,
@@ -176,6 +177,8 @@ class FullCheckTab(ctk.CTkFrame):
                 self.cards[svc["id"]] = card
 
         self._refresh_card_visibility()
+        # Rebind smooth scroll to all newly created card widgets
+        self._cards_rebind(self._cards_container)
 
     def _refresh_card_visibility(self):
         """Show/hide cards and category labels based on selection."""

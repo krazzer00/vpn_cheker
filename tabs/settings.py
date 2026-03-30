@@ -58,7 +58,7 @@ class SettingsTab(ctk.CTkFrame):
 
         self._scroll = ctk.CTkScrollableFrame(self, fg_color="transparent")
         self._scroll.pack(fill="both", expand=True, padx=14, pady=(0, 10))
-        apply_smooth_scroll(self._scroll)
+        self._rebind = apply_smooth_scroll(self._scroll)
 
     def _load(self):
         for w in self._scroll.winfo_children():
@@ -67,6 +67,7 @@ class SettingsTab(ctk.CTkFrame):
         self._services = load_services()
         for svc in self._services:
             self._add_row(svc)
+        self._rebind(self._scroll)
 
     def _add_row(self, svc: dict):
         row_frame = ctk.CTkFrame(self._scroll, fg_color=CARD_BG,

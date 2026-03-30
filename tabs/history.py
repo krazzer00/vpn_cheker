@@ -28,7 +28,7 @@ class HistoryTab(ctk.CTkFrame):
 
         self._scroll = ctk.CTkScrollableFrame(self, fg_color="transparent")
         self._scroll.pack(fill="both", expand=True, padx=14, pady=10)
-        self._wheel_handler = apply_smooth_scroll(self._scroll)
+        self._rebind = apply_smooth_scroll(self._scroll)
 
     def refresh(self):
         """Reload and redraw history list."""
@@ -49,6 +49,7 @@ class HistoryTab(ctk.CTkFrame):
 
         for record in records:
             self._add_row(record)
+        self._rebind(self._scroll)
 
     def _add_row(self, record: dict):
         row = ctk.CTkFrame(self._scroll, fg_color=CARD_BG, corner_radius=10,

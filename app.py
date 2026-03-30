@@ -1,6 +1,7 @@
 # app.py
 import queue
 import threading
+import tkinter as tk
 
 import customtkinter as ctk
 import requests
@@ -12,6 +13,13 @@ from theme import DARK_BG, DARKER_BG, BORDER, ACCENT
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
 
+_TAB_NAMES = [
+    "🛡  Полная проверка",
+    "🔍  Кастомная",
+    "📋  История",
+    "⚙️  Настройки",
+]
+
 
 class VpnCheckerApp(ctk.CTk):
     def __init__(self):
@@ -22,7 +30,6 @@ class VpnCheckerApp(ctk.CTk):
         self.configure(fg_color=DARK_BG)
 
         self.result_queue: queue.Queue = queue.Queue()
-        self._tab_refs: dict = {}  # keep refs to avoid GC
         self._current_ip_info: str = ""
         self._resize_job = None
         self._polling = True
@@ -31,88 +38,124 @@ class VpnCheckerApp(ctk.CTk):
         self._build_tabs()
         self._poll_queue()
         self.bind("<Configure>", self._on_resize)
-        # Fetch IP after window is shown
         self.after(200, self._fetch_ip_async)
 
+    # ── Titlebar ───────────────────────────────────────────────────────────────
+
     def _build_titlebar(self):
-        bar = ctk.CTkFrame(self, fg_color=DARKER_BG, height=44, corner_radius=0)
+        bar = tk.Frame(self, bg=DARKER_BG, height=44)
         bar.pack(fill="x", side="top")
         bar.pack_propagate(False)
 
-        # Traffic light dots (macOS style)
-        dots = ctk.CTkFrame(bar, fg_color="transparent")
+        # Traffic light dots
+        dots = tk.Frame(bar, bg=DARKER_BG)
         dots.pack(side="left", padx=14, pady=14)
         for color in ("#FF5F57", "#FEBC2E", "#28C840"):
-            ctk.CTkFrame(dots, width=13, height=13, corner_radius=7,
-                         fg_color=color).pack(side="left", padx=3)
+            tk.Frame(dots, bg=color, width=13, height=13).pack(side="left", padx=3)
 
-        ctk.CTkLabel(bar, text="VPN Checker",
-                     font=("Segoe UI", 13, "bold"),
-                     text_color="#aaaaaa").pack(side="left", padx=8)
+        tk.Label(bar, text="VPN Checker", bg=DARKER_BG, fg="#888899",
+                 font=("Segoe UI", 12, "bold")).pack(side="left", padx=6)
 
-        # IP badge (right side)
+        # IP badge (right side) — CTkFrame for rounded corners
         self.ip_badge = ctk.CTkFrame(bar, fg_color="#1e1e2e",
                                       corner_radius=20,
                                       border_width=1, border_color=BORDER)
         self.ip_badge.pack(side="right", padx=14, pady=10)
         self.ip_dot = ctk.CTkLabel(self.ip_badge, text="●", width=12,
-                                    font=("Segoe UI", 10),
-                                    text_color="#555566")
+                                    font=("Segoe UI", 10), text_color="#333344")
         self.ip_dot.pack(side="left", padx=(10, 2))
-        self.ip_label = ctk.CTkLabel(self.ip_badge,
-                                      text="Определение IP...",
-                                      font=("Segoe UI", 11),
-                                      text_color="#7c7caa")
+        self.ip_label = ctk.CTkLabel(self.ip_badge, text="Определение IP...",
+                                      font=("Segoe UI", 11), text_color="#555566")
         self.ip_label.pack(side="left", padx=(0, 10))
 
+    # ── Tabs — place()+lift() so switching never triggers Configure cascade ────
+
     def _build_tabs(self):
-        self.tabview = ctk.CTkTabview(
-            self, fg_color=DARK_BG,
-            segmented_button_fg_color=DARKER_BG,
-            segmented_button_selected_color=ACCENT,
-            segmented_button_unselected_color=DARKER_BG,
-        )
-        self.tabview.pack(fill="both", expand=True)
+        # Tab button bar
+        bar = tk.Frame(self, bg=DARKER_BG, height=38)
+        bar.pack(fill="x")
+        bar.pack_propagate(False)
 
-        for name in ("🛡  Полная проверка", "🔍  Кастомная",
-                     "📋  История", "⚙️  Настройки"):
-            self.tabview.add(name)
+        self._tab_btns: dict[str, ctk.CTkButton] = {}
+        for name in _TAB_NAMES:
+            btn = ctk.CTkButton(
+                bar, text=name,
+                fg_color=ACCENT, hover_color="#7b8ef5",
+                text_color="white",
+                font=("Segoe UI", 12),
+                corner_radius=0, height=38, border_spacing=0,
+                command=lambda n=name: self._switch_tab(n),
+            )
+            btn.pack(side="left", padx=(0, 1))
+            self._tab_btns[name] = btn
 
+        # Content area — plain tk.Frame, no CTk redraw
+        content = tk.Frame(self, bg=DARK_BG)
+        content.pack(fill="both", expand=True)
+
+        # All tab frames stacked via place() — lift() to switch, zero Configure cascade
+        self._tab_frames: dict[str, tk.Frame] = {}
+        for name in _TAB_NAMES:
+            f = tk.Frame(content, bg=DARK_BG)
+            f.place(relx=0, rely=0, relwidth=1, relheight=1)
+            self._tab_frames[name] = f
+
+        # Build tab content
         self.full_tab = FullCheckTab(
-            self.tabview.tab("🛡  Полная проверка"),
+            self._tab_frames[_TAB_NAMES[0]],
             self.result_queue,
             on_check_complete=self._on_check_complete,
         )
         self.full_tab.pack(fill="both", expand=True)
 
         self.custom_tab = CustomCheckTab(
-            self.tabview.tab("🔍  Кастомная"),
+            self._tab_frames[_TAB_NAMES[1]],
             self.result_queue,
         )
         self.custom_tab.pack(fill="both", expand=True)
 
-        # History and Settings tabs imported lazily to avoid circular at module level
         from tabs.history import HistoryTab
         from tabs.settings import SettingsTab
 
-        self.history_tab = HistoryTab(self.tabview.tab("📋  История"))
+        self.history_tab = HistoryTab(self._tab_frames[_TAB_NAMES[2]])
         self.history_tab.pack(fill="both", expand=True)
 
         self.settings_tab = SettingsTab(
-            self.tabview.tab("⚙️  Настройки"),
+            self._tab_frames[_TAB_NAMES[3]],
             on_save=self._on_settings_saved,
         )
         self.settings_tab.pack(fill="both", expand=True)
 
+        # Activate first tab
+        self._current_tab = _TAB_NAMES[0]
+        self._update_tab_btns(_TAB_NAMES[0])
+        self._tab_frames[_TAB_NAMES[0]].lift()
+
+    def _switch_tab(self, name: str):
+        if name == self._current_tab:
+            return
+        self._tab_frames[name].lift()
+        self._current_tab = name
+        self._update_tab_btns(name)
+
+    def _update_tab_btns(self, active: str):
+        for name, btn in self._tab_btns.items():
+            btn.configure(
+                fg_color=ACCENT if name == active else DARKER_BG,
+                text_color="white" if name == active else "#666677",
+            )
+
+    # ── Callbacks ──────────────────────────────────────────────────────────────
+
     def _on_check_complete(self, verdict: dict, service_results: list[dict]):
-        """Called by FullCheckTab after a check finishes. Saves to history."""
         from engine.history import save_result
         save_result(verdict, service_results, ip_info=self._current_ip_info)
         self.history_tab.refresh()
 
     def _on_settings_saved(self):
-        """Called by SettingsTab after services are saved."""
         self.full_tab.reload_services()
+
+    # ── IP fetch ───────────────────────────────────────────────────────────────
 
     def _fetch_ip_async(self):
         threading.Thread(target=self._fetch_ip, daemon=True).start()
@@ -138,10 +181,11 @@ class VpnCheckerApp(ctk.CTk):
                 self.ip_dot.configure(text_color="#F44336"),
             ))
 
+    # ── Resize debounce ────────────────────────────────────────────────────────
+
     def _on_resize(self, event):
         if event.widget is not self:
             return
-        # Pause queue polling during active resize to reduce contention
         self._polling = False
         if self._resize_job:
             self.after_cancel(self._resize_job)
@@ -150,6 +194,8 @@ class VpnCheckerApp(ctk.CTk):
     def _resume_polling(self):
         self._resize_job = None
         self._polling = True
+
+    # ── Queue poll ─────────────────────────────────────────────────────────────
 
     def _poll_queue(self):
         if self._polling:
