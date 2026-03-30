@@ -5,7 +5,7 @@ from pathlib import Path
 
 _HISTORY_DIR = Path.home() / ".vpn_checker"
 _HISTORY_PATH = _HISTORY_DIR / "history.json"
-_MAX_RECORDS = 100
+_MAX_RECORDS = 10
 
 
 def _ensure_dir():
