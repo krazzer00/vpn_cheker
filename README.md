@@ -1,131 +1,126 @@
-# VPN Checker
+<div align="center">
 
-A desktop app for Windows that checks whether your VPN is working correctly — tests service accessibility, measures real network speed, and detects geo-restrictions for AI services.
+# 🛡 VPN Checker
 
-![Platform](https://img.shields.io/badge/platform-Windows-blue)
-![Python](https://img.shields.io/badge/python-3.11%2B-blue)
-![License](https://img.shields.io/badge/license-MIT-green)
+**Десктопное приложение для Windows — проверяет, работает ли ваш VPN**
 
----
+Тестирует доступность сервисов, определяет гео-блокировки для AI, измеряет реальную скорость интернета
 
-## Features
+[![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)](https://python.org)
+[![Platform](https://img.shields.io/badge/Windows-x64-0078D6?logo=windows&logoColor=white)](https://github.com/krazzer00/vpn_cheker/releases)
+[![PyQt5](https://img.shields.io/badge/PyQt5-5.15-41CD52?logo=qt&logoColor=white)](https://pypi.org/project/PyQt5/)
 
-- **Service accessibility check** — tests reachability of popular services (YouTube, Telegram, Instagram, GitHub, Discord, VRChat, etc.)
-- **AI region detection** — verifies whether Claude, ChatGPT, and Gemini are accessible from your current region (detects geo-blocks)
-- **Real speed measurement** — uses the official Ookla Speedtest CLI for accurate download/upload/ping results with live progress
-- **SOCKS5 proxy support** — toggle all checks through a local SOCKS5 proxy (127.0.0.1:2080) with one click
-- **Public DNS** — all DNS lookups go through 8.8.8.8 / 1.1.1.1 to avoid local DNS poisoning
-- **Check history** — every check is saved locally with timestamp and IP info
-- **Custom checks** — run checks for individual services on demand
-- **5 UI themes** — Dark, Midnight Blue, Forest, Crimson, Slate
-- **Portable build** — single `.exe`, no installation needed
+</div>
 
 ---
 
-## Screenshots
+## ✨ Возможности
 
-> Run a check, watch cards update in real time, get a verdict with speed stats.
+| | |
+|---|---|
+| 🌐 **Проверка сервисов** | YouTube, Telegram, Instagram, GitHub, Discord, VRChat и другие |
+| 🤖 **AI регион** | Определяет, доступны ли Claude, ChatGPT и Gemini в вашем регионе |
+| ⚡ **Замер скорости** | Официальный Ookla Speedtest CLI — точные значения с живым прогрессом |
+| 🔀 **SOCKS5 прокси** | Один клик — весь трафик проверок идёт через 127.0.0.1:2080 |
+| 🔒 **Публичный DNS** | Все запросы резолвятся через 8.8.8.8 / 1.1.1.1, минуя локальный DNS |
+| 📋 **История проверок** | Каждый результат сохраняется локально с временем и IP |
+| 🎨 **5 тем оформления** | Dark, Midnight Blue, Forest, Crimson, Slate |
+| 📦 **Портабельный .exe** | Один файл, без установки |
 
 ---
 
-## Quick Start (pre-built)
+## 🚀 Быстрый старт
 
-1. Download `VPN-Checker.exe` from [Releases](../../releases)
-2. Place `speedtest.exe` (Ookla CLI) in the same folder — [download here](https://www.speedtest.net/apps/cli)
-3. Run `VPN-Checker.exe`
+### Готовый .exe
 
----
+1. Скачать `VPN-Checker.exe` из [Releases](../../releases)
+2. Положить рядом `speedtest.exe` ([скачать с Ookla](https://www.speedtest.net/apps/cli))
+3. Запустить
 
-## Build from Source
-
-**Requirements:** Python 3.11+, [uv](https://github.com/astral-sh/uv), Windows x64
+### Из исходников
 
 ```bat
-# Install dependencies
+git clone https://github.com/krazzer00/vpn_cheker.git
+cd vpn_cheker
+
+:: Установить зависимости (нужен uv)
 uv sync
 
-# Run from source
+:: Запустить
 uv run main.py
 
-# Build portable .exe
+:: Собрать .exe
 build.bat
 ```
 
-The built executable will be at `dist/VPN-Checker.exe`.
-
-> **Note:** `speedtest.exe` (Ookla CLI for Windows) must be present in the project root before building — it gets bundled automatically via the spec file.
+> Перед сборкой положите `speedtest.exe` в корень проекта — он автоматически включится в бандл.
 
 ---
 
-## Project Structure
+## 🗂 Структура проекта
 
 ```
 vpn_cheker/
-├── main.py              # Entry point, DNS hook installation
-├── app.py               # Main window, tab routing, IP badge
-├── theme.py             # Theme definitions and palette
-├── services.json        # Service definitions (editable)
-├── VPN-Checker.spec     # PyInstaller build spec
-├── build.bat            # One-click build script
-├── speedtest.exe        # Ookla Speedtest CLI (not in repo, download separately)
+├── main.py              # Точка входа, установка DNS-хука
+├── app.py               # Главное окно, вкладки, IP-бейдж
+├── theme.py             # Темы и палитры
+├── services.json        # Список сервисов (можно редактировать)
+├── VPN-Checker.spec     # Конфиг PyInstaller
+├── build.bat            # Сборка одной командой
+├── speedtest.exe        # Ookla Speedtest CLI (скачать отдельно)
 │
-├── engine/
-│   ├── checker.py       # Main check orchestrator (threading)
-│   ├── http_check.py    # HTTP reachability + AI region checks
-│   ├── ping.py          # ICMP/TCP ping with SOCKS5 fallback
-│   ├── speedtest.py     # Ookla CLI wrapper with live JSONL streaming
-│   ├── dns.py           # Public DNS hook (patches socket.getaddrinfo)
-│   ├── proxy.py         # SOCKS5 proxy state and requests integration
-│   ├── verdict.py       # Overall check verdict logic
-│   ├── history.py       # Local check history (JSON)
-│   └── config.py        # Settings persistence
+├── engine/              # Логика проверок
+│   ├── checker.py       # Оркестратор (потоки, очередь)
+│   ├── http_check.py    # HTTP + проверка AI-региона
+│   ├── ping.py          # ICMP/TCP пинг с SOCKS5 fallback
+│   ├── speedtest.py     # Обёртка над Ookla CLI (live JSONL)
+│   ├── dns.py           # Хук публичного DNS
+│   ├── proxy.py         # Состояние SOCKS5 прокси
+│   ├── verdict.py       # Итоговый вердикт
+│   ├── history.py       # История результатов
+│   └── config.py        # Настройки
 │
-├── tabs/
-│   ├── full_check.py    # Full check tab UI
-│   ├── custom_check.py  # Custom check tab UI
-│   ├── history.py       # History tab UI
-│   └── settings.py      # Settings tab UI
-│
-├── widgets/
-│   ├── service_card.py  # Individual service result card
-│   ├── speed_bar.py     # Live speed measurement bar
-│   └── smooth_scroll.py # Smooth scroll area
-│
-└── tests/               # pytest test suite
+├── tabs/                # Вкладки интерфейса
+├── widgets/             # UI-компоненты (карточки, спидбар)
+└── tests/               # pytest тесты
 ```
 
 ---
 
-## Services
+## ⚙️ Конфигурация сервисов
 
-Services are defined in `services.json`. You can add, remove, or disable entries.
+Сервисы описаны в `services.json` — можно добавлять свои:
 
-| Field | Description |
-|---|---|
-| `id` | Unique identifier |
-| `name` | Display name |
-| `icon` | Emoji icon |
-| `category` | Group label (AI, Media, Social, Other) |
-| `check_url` | URL to test |
-| `check_type` | `http` or `ai_region` |
-| `port` | TCP port for ping fallback |
-| `enabled` | Include in full check |
+```json
+{
+  "id": "myservice",
+  "name": "My Service",
+  "icon": "🔥",
+  "category": "Other",
+  "check_url": "https://myservice.com",
+  "check_type": "http",
+  "port": 443,
+  "enabled": true
+}
+```
 
-**`ai_region`** check sends a request and considers the service reachable if the server responds (even with 401/400/422 — meaning it's accessible but auth is missing). A 403 or timeout means geo-blocked.
-
----
-
-## SOCKS5 Proxy
-
-Click the **SOCKS5** button in the header to route all checks through `127.0.0.1:2080`.
-
-- HTTP/HTTPS checks use `socks5h://` (proxy-side DNS, no local leak)
-- Ping uses TCP connect through PySocks with `rdns=True`
-- Speed test does **not** go through the proxy (Ookla CLI runs independently)
+**`check_type`:**
+- `http` — проверяет доступность по HTTP
+- `ai_region` — считает сервис доступным при ответах 200/400/401/422 (без ключа — нормально), при 403 или таймауте — гео-блок
 
 ---
 
-## Running Tests
+## 🔀 SOCKS5 прокси
+
+Кнопка **SOCKS5** в шапке приложения — один клик, и все проверки идут через `127.0.0.1:2080`:
+
+- HTTP-запросы используют схему `socks5h://` — DNS резолвится на стороне прокси, утечек нет
+- Пинг идёт через TCP connect via PySocks (`rdns=True`)
+- Замер скорости работает напрямую (Ookla CLI независим)
+
+---
+
+## 🧪 Тесты
 
 ```bat
 uv run pytest tests/ -v
@@ -133,19 +128,21 @@ uv run pytest tests/ -v
 
 ---
 
-## Dependencies
+## 📦 Зависимости
 
-| Package | Purpose |
+| Пакет | Назначение |
 |---|---|
-| PyQt5 | GUI framework |
-| requests | HTTP checks |
-| PySocks | SOCKS5 proxy support |
-| ping3 | ICMP ping |
+| PyQt5 | Интерфейс |
+| requests | HTTP-проверки |
+| PySocks | SOCKS5 прокси |
+| ping3 | ICMP пинг |
 
-Speed measurement uses the official [Ookla Speedtest CLI](https://www.speedtest.net/apps/cli) binary — not a Python library.
+Скорость измеряется через официальный [Ookla Speedtest CLI](https://www.speedtest.net/apps/cli) — не библиотека Python.
 
 ---
 
-## License
+<div align="center">
 
-MIT
+MIT License
+
+</div>
