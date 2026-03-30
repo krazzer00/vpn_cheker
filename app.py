@@ -17,17 +17,20 @@ class VpnCheckerApp(ctk.CTk):
     def __init__(self):
         super().__init__()
         self.title("VPN Checker")
-        self.geometry("1280x820")
-        self.minsize(960, 640)
+        self.geometry("1440x920")
+        self.minsize(1024, 680)
         self.configure(fg_color=DARK_BG)
 
         self.result_queue: queue.Queue = queue.Queue()
         self._tab_refs: dict = {}  # keep refs to avoid GC
         self._current_ip_info: str = ""
+        self._resize_job = None
+        self._polling = True
 
         self._build_titlebar()
         self._build_tabs()
         self._poll_queue()
+        self.bind("<Configure>", self._on_resize)
         # Fetch IP after window is shown
         self.after(200, self._fetch_ip_async)
 
@@ -135,12 +138,26 @@ class VpnCheckerApp(ctk.CTk):
                 self.ip_dot.configure(text_color="#F44336"),
             ))
 
+    def _on_resize(self, event):
+        if event.widget is not self:
+            return
+        # Pause queue polling during active resize to reduce contention
+        self._polling = False
+        if self._resize_job:
+            self.after_cancel(self._resize_job)
+        self._resize_job = self.after(120, self._resume_polling)
+
+    def _resume_polling(self):
+        self._resize_job = None
+        self._polling = True
+
     def _poll_queue(self):
-        try:
-            while True:
-                msg = self.result_queue.get_nowait()
-                self.full_tab.handle_result(msg)
-                self.custom_tab.handle_result(msg)
-        except queue.Empty:
-            pass
+        if self._polling:
+            try:
+                while True:
+                    msg = self.result_queue.get_nowait()
+                    self.full_tab.handle_result(msg)
+                    self.custom_tab.handle_result(msg)
+            except queue.Empty:
+                pass
         self.after(100, self._poll_queue)

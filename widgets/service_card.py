@@ -1,33 +1,35 @@
 # widgets/service_card.py
+import tkinter as tk
 import customtkinter as ctk
-from theme import (CARD_BG, BORDER, COLOR_OK, COLOR_WARN, COLOR_BAD,
+from theme import (CARD_BG, COLOR_OK, COLOR_WARN, COLOR_BAD,
                    COLOR_CHECKING, COLOR_MUTED, BADGE_CHECKING_BG)
+
+_DIVIDER = "#232333"
 
 
 def _ping_color(ping_ms):
     if ping_ms is None:
-        return COLOR_BAD
-    if ping_ms < 100:
+        return COLOR_MUTED
+    if ping_ms < 80:
         return COLOR_OK
-    if ping_ms < 200:
+    if ping_ms < 180:
         return COLOR_WARN
     return COLOR_BAD
 
 
-def _badge_bg(color: str) -> str:
-    return {
-        COLOR_OK: "#1a2e1a",
-        COLOR_WARN: "#2e1f0a",
-        COLOR_BAD: "#2e0a0a",
-        COLOR_CHECKING: BADGE_CHECKING_BG,
-    }.get(color, BADGE_CHECKING_BG)
+def _loss_color(loss_pct):
+    if loss_pct is None or loss_pct == 0:
+        return COLOR_OK
+    if loss_pct < 10:
+        return COLOR_WARN
+    return COLOR_BAD
 
 
 class ServiceCard(ctk.CTkFrame):
     """
-    Card widget for one service result.
-    Layout: [4px colored accent strip] [content: top row + stats row]
-    The accent strip color reflects service status.
+    Dashboard-style card for one service.
+    Layout: [4px accent] [icon+name / status] [big metrics: ping · loss · region]
+    Uses plain tk.Frame for layout containers to reduce CTk redraw overhead.
     """
 
     def __init__(self, master, service: dict, **kwargs):
@@ -35,65 +37,87 @@ class ServiceCard(ctk.CTkFrame):
                          border_width=0, **kwargs)
         self.service = service
 
-        # Left accent strip (4px, full height)
+        # 4px accent strip — keep as CTkFrame so we can configure fg_color
         self._accent = ctk.CTkFrame(self, fg_color=COLOR_CHECKING,
                                      width=4, corner_radius=0)
         self._accent.pack(side="left", fill="y")
         self._accent.pack_propagate(False)
 
-        # Content wrapper
-        content = ctk.CTkFrame(self, fg_color="transparent")
+        # Content area — plain tk.Frame (no CTk redraw on resize)
+        content = tk.Frame(self, bg=CARD_BG)
         content.pack(side="left", fill="both", expand=True)
 
         self._build(content)
 
+    # ── Build ──────────────────────────────────────────────────────────────────
+
     def _build(self, parent):
-        # Top row: icon+name on left, status badge on right
-        top = ctk.CTkFrame(parent, fg_color="transparent")
-        top.pack(fill="x", padx=(10, 12), pady=(10, 4))
+        # ── Top row: icon + name  /  status ──────────────────────────────────
+        top = tk.Frame(parent, bg=CARD_BG)
+        top.pack(fill="x", padx=(12, 14), pady=(11, 6))
 
         ctk.CTkLabel(
             top,
             text=self.service["icon"] + "  " + self.service["name"],
             font=("Segoe UI", 13, "bold"),
+            fg_color="transparent",
+            text_color="#c8c8dc",
         ).pack(side="left")
 
+        # Status: colored dot + text, no box
         self.status_badge = ctk.CTkLabel(
-            top, text="Ожидание",
+            top, text="● Ожидание",
             font=("Segoe UI", 10, "bold"),
-            text_color=COLOR_CHECKING,
-            fg_color=BADGE_CHECKING_BG,
-            corner_radius=8,
-            padx=8, pady=2,
+            fg_color="transparent",
+            text_color="#3a3a55",
         )
         self.status_badge.pack(side="right")
 
-        # Stats row
-        stats = ctk.CTkFrame(parent, fg_color="transparent")
-        stats.pack(fill="x", padx=(10, 12), pady=(0, 10))
+        # ── Metrics row ───────────────────────────────────────────────────────
+        row = tk.Frame(parent, bg=CARD_BG)
+        row.pack(fill="x", padx=(12, 14), pady=(0, 12))
 
-        self.ping_label = self._stat(stats, "ПИНГ", "—")
-        self.loss_label = self._stat(stats, "ПОТЕРИ", "—")
-        self.region_label = self._stat(stats, "РЕГИОН", "—")
+        # Ping
+        self.ping_val, self.ping_unit = self._metric(row, "—", "мс  пинг")
+        self._vdivider(row)
 
-    def _stat(self, parent, label_text: str, value_text: str):
-        frame = ctk.CTkFrame(parent, fg_color="transparent")
-        frame.pack(side="left", padx=(0, 18))
-        ctk.CTkLabel(frame, text=label_text,
-                     font=("Segoe UI", 9), text_color=COLOR_MUTED).pack(anchor="w")
-        val = ctk.CTkLabel(frame, text=value_text,
-                           font=("Segoe UI", 13, "bold"), text_color="#cccccc")
+        # Loss
+        self.loss_val, _ = self._metric(row, "—", "потери")
+        self._vdivider(row)
+
+        # Region
+        self.region_val, _ = self._metric(row, "—", "регион")
+
+    def _metric(self, parent, value: str, caption: str):
+        """Big number + small caption below."""
+        block = tk.Frame(parent, bg=CARD_BG)
+        block.pack(side="left", padx=(0, 6))
+
+        val = ctk.CTkLabel(block, text=value,
+                           font=("Segoe UI", 21, "bold"),
+                           fg_color="transparent",
+                           text_color=COLOR_MUTED)
         val.pack(anchor="w")
-        return val
+
+        cap = ctk.CTkLabel(block, text=caption,
+                           font=("Segoe UI", 9),
+                           fg_color="transparent",
+                           text_color="#3a3a52")
+        cap.pack(anchor="w")
+        return val, cap
+
+    def _vdivider(self, parent):
+        tk.Frame(parent, bg=_DIVIDER, width=1).pack(
+            side="left", fill="y", padx=10, pady=2)
+
+    # ── State updates ──────────────────────────────────────────────────────────
 
     def set_checking(self):
         self._accent.configure(fg_color=COLOR_CHECKING)
-        self.status_badge.configure(text="Проверка...",
-                                     text_color=COLOR_CHECKING,
-                                     fg_color=BADGE_CHECKING_BG)
-        self.ping_label.configure(text="—", text_color="#cccccc")
-        self.loss_label.configure(text="—", text_color="#cccccc")
-        self.region_label.configure(text="—", text_color="#cccccc")
+        self.status_badge.configure(text="● Проверка", text_color=COLOR_CHECKING)
+        self.ping_val.configure(text="…", text_color=COLOR_CHECKING)
+        self.loss_val.configure(text="…", text_color=COLOR_CHECKING)
+        self.region_val.configure(text="…", text_color=COLOR_CHECKING)
 
     def update_result(self, result: dict):
         accessible = result.get("accessible", False)
@@ -102,30 +126,34 @@ class ServiceCard(ctk.CTkFrame):
         region = result.get("region_accessible")
 
         status_color = COLOR_OK if accessible else COLOR_BAD
-        status_text = "Доступен" if accessible else "Недоступен"
-
         self._accent.configure(fg_color=status_color)
         self.status_badge.configure(
-            text=status_text,
+            text="● Доступен" if accessible else "● Недоступен",
             text_color=status_color,
-            fg_color=_badge_bg(status_color),
         )
 
-        ping_col = _ping_color(ping_ms)
-        self.ping_label.configure(
-            text=f"{ping_ms:.0f} ms" if ping_ms is not None else "—",
-            text_color=ping_col,
-        )
+        # Ping
+        if ping_ms is not None:
+            self.ping_val.configure(
+                text=f"{ping_ms:.0f}",
+                text_color=_ping_color(ping_ms),
+            )
+        else:
+            self.ping_val.configure(text="—", text_color=COLOR_MUTED)
 
+        # Loss
         if loss_pct is None:
-            self.loss_label.configure(text="н/п", text_color=COLOR_MUTED)
+            self.loss_val.configure(text="н/п", text_color=COLOR_MUTED)
         else:
-            lc = COLOR_OK if loss_pct == 0 else (COLOR_WARN if loss_pct < 10 else COLOR_BAD)
-            self.loss_label.configure(text=f"{loss_pct:.1f}%", text_color=lc)
+            self.loss_val.configure(
+                text=f"{loss_pct:.1f}%",
+                text_color=_loss_color(loss_pct),
+            )
 
+        # Region
         if region is None:
-            self.region_label.configure(text="н/п", text_color=COLOR_MUTED)
+            self.region_val.configure(text="—", text_color=COLOR_MUTED)
         elif region:
-            self.region_label.configure(text="✓", text_color=COLOR_OK)
+            self.region_val.configure(text="✓", text_color=COLOR_OK)
         else:
-            self.region_label.configure(text="✗", text_color=COLOR_BAD)
+            self.region_val.configure(text="✗", text_color=COLOR_BAD)

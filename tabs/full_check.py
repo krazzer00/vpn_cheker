@@ -1,6 +1,7 @@
 # tabs/full_check.py
 import queue
 import threading
+import tkinter as tk
 from typing import Callable, Optional
 
 import customtkinter as ctk
@@ -75,7 +76,7 @@ class FullCheckTab(ctk.CTkFrame):
         self.run_btn.pack(fill="x", padx=10, pady=10)
 
         # Right panel
-        right = ctk.CTkFrame(self, fg_color=DARK_BG)
+        right = tk.Frame(self, bg=DARK_BG)
         right.pack(side="left", fill="both", expand=True)
 
         self.speed_bar = SpeedBar(right)
@@ -126,7 +127,7 @@ class FullCheckTab(ctk.CTkFrame):
                                           font=("Segoe UI", 30))
         self.verdict_icon.pack(side="left", padx=18, pady=14)
 
-        vt = ctk.CTkFrame(self.verdict_frame, fg_color="transparent")
+        vt = tk.Frame(self.verdict_frame, bg=CARD_BG)
         vt.pack(side="left", fill="both", expand=True, pady=10)
 
         self.verdict_title = ctk.CTkLabel(vt, text="Нажми Запустить",
