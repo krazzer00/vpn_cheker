@@ -39,8 +39,11 @@ def ping_host(host: str, count: int = PING_COUNT) -> PingResult:
             results.append(rtt)
         lost  = sum(1 for r in results if r is None)
         valid = [r for r in results if r is not None]
+        if not valid:
+            # All ICMP probes timed out — ICMP is likely blocked by firewall
+            return tcp_ping(host, 443)
         return PingResult(
-            ping_ms=round(sum(valid) / len(valid), 1) if valid else None,
+            ping_ms=round(sum(valid) / len(valid), 1),
             loss_pct=round((lost / count) * 100, 1),
             method="icmp",
         )

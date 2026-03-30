@@ -1,4 +1,5 @@
 {
+  "_version": 2,
   "services": [
     {
       "id": "claude",
