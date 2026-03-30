@@ -1,9 +1,13 @@
-.superpowers/
+# Python
 __pycache__/
 *.pyc
 *.pyo
-dist/
-build/
-*.spec
 .venv/
 venv/
+
+# Build output
+dist/
+build/
+
+# Dev tools
+.superpowers/
