@@ -1,0 +1,19 @@
+[project]
+name = "vpn-checker"
+version = "1.0.0"
+requires-python = ">=3.11"
+dependencies = [
+    "customtkinter>=5.2.0",
+    "ping3>=4.0.0",
+    "requests>=2.31.0",
+    "pillow>=10.0.0",
+]
+
+[project.optional-dependencies]
+build = [
+    "pyinstaller>=6.0.0",
+]
+dev = [
+    "pytest>=8.0.0",
+]
+
