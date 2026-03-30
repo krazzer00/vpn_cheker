@@ -1,180 +1,301 @@
 # tabs/settings.py
 from typing import Callable, Optional
 
-import customtkinter as ctk
+from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
+                              QPushButton, QFrame, QScrollArea, QLineEdit,
+                              QComboBox, QCheckBox)
+from PyQt5.QtCore import Qt, QTimer
 
 from engine.config import load_services, save_services
-from widgets.smooth_scroll import apply_smooth_scroll
-from theme import (DARK_BG, DARKER_BG, CARD_BG, BORDER,
-                   COLOR_OK, COLOR_BAD, COLOR_MUTED, ACCENT)
+from theme import DARK_BG, DARKER_BG, CARD_BG, BORDER, COLOR_OK, COLOR_BAD, COLOR_MUTED, ACCENT
 
 _CATEGORIES = ["AI", "Media", "Social", "Other"]
 _CHECK_TYPES = ["http", "ai_region"]
 
 
-class SettingsTab(ctk.CTkFrame):
-    def __init__(self, master, on_save: Optional[Callable] = None, **kwargs):
-        super().__init__(master, fg_color=DARK_BG, **kwargs)
+class SettingsTab(QWidget):
+    def __init__(self, on_save: Optional[Callable] = None, parent=None):
+        super().__init__(parent)
         self._on_save = on_save
-        self._services: list[dict] = []
-        self._rows: list[dict] = []  # per-row widget refs
+        self._rows: list[dict] = []
         self._build()
         self._load()
 
-    def _build(self):
+    def _build(self) -> None:
+        self.setStyleSheet(f"background: {DARK_BG};")
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+
         # Top bar
-        top = ctk.CTkFrame(self, fg_color=DARKER_BG, height=48, corner_radius=0)
-        top.pack(fill="x")
-        top.pack_propagate(False)
-        ctk.CTkLabel(top, text="Настройки сервисов",
-                     font=("Segoe UI", 14, "bold"),
-                     text_color="#cccccc").pack(side="left", padx=16)
-        self._save_btn = ctk.CTkButton(
-            top, text="💾 Сохранить", width=120, height=30,
-            font=("Segoe UI", 12, "bold"),
-            fg_color=ACCENT, hover_color="#7b8ef5",
-            corner_radius=8,
-            command=self._save,
+        top = QFrame()
+        top.setFixedHeight(48)
+        top.setStyleSheet(
+            f"QFrame {{ background: {DARKER_BG}; border-bottom: 1px solid {BORDER};"
+            f" border-radius: 0; }}"
         )
-        self._save_btn.pack(side="right", padx=12, pady=9)
-        ctk.CTkButton(
-            top, text="+ Добавить", width=100, height=30,
-            font=("Segoe UI", 12),
-            fg_color="#1e2e1e", hover_color="#2e4e2e",
-            text_color=COLOR_OK,
-            corner_radius=8,
-            command=self._add_service,
-        ).pack(side="right", padx=4, pady=9)
+        top_layout = QHBoxLayout(top)
+        top_layout.setContentsMargins(16, 0, 12, 0)
+        top_layout.setSpacing(8)
+
+        title = QLabel("Настройки сервисов")
+        title.setStyleSheet(
+            "font-size: 14px; font-weight: bold; color: #cccccc; background: transparent;"
+        )
+        top_layout.addWidget(title)
+        top_layout.addStretch()
+
+        add_btn = QPushButton("+ Добавить")
+        add_btn.setFixedSize(100, 30)
+        add_btn.setStyleSheet("""
+            QPushButton {
+                background: #1e2e1e; color: #4CAF50;
+                border: none; border-radius: 8px; font-size: 12px;
+            }
+            QPushButton:hover { background: #2e4e2e; }
+        """)
+        add_btn.clicked.connect(self._add_service)
+        top_layout.addWidget(add_btn)
+
+        self._save_btn = QPushButton("💾 Сохранить")
+        self._save_btn.setFixedSize(120, 30)
+        self._save_btn.setStyleSheet(f"""
+            QPushButton {{
+                background: {ACCENT}; color: white;
+                border: none; border-radius: 8px;
+                font-size: 12px; font-weight: bold;
+            }}
+            QPushButton:hover {{ background: #7b8ef5; }}
+        """)
+        self._save_btn.clicked.connect(self._save)
+        top_layout.addWidget(self._save_btn)
+        layout.addWidget(top)
 
         # Column headers
-        hdr = ctk.CTkFrame(self, fg_color="transparent")
-        hdr.pack(fill="x", padx=14, pady=(10, 2))
-        for text, w in [("Вкл", 44), ("Иконка", 60), ("Название", 140),
+        hdr = QWidget()
+        hdr.setFixedHeight(28)
+        hdr.setStyleSheet(f"background: {DARK_BG};")
+        hdr_layout = QHBoxLayout(hdr)
+        hdr_layout.setContentsMargins(14, 0, 14, 0)
+        hdr_layout.setSpacing(4)
+        for text, w in [("Вкл", 52), ("Иконка", 60), ("Название", 140),
                         ("URL", 240), ("Категория", 100), ("Тип", 90), ("", 40)]:
-            ctk.CTkLabel(hdr, text=text, width=w,
-                         font=("Segoe UI", 10, "bold"),
-                         text_color=COLOR_MUTED,
-                         anchor="w").pack(side="left", padx=2)
+            lbl = QLabel(text)
+            lbl.setFixedWidth(w)
+            lbl.setStyleSheet(
+                f"font-size: 10px; font-weight: bold; color: {COLOR_MUTED}; background: transparent;"
+            )
+            hdr_layout.addWidget(lbl)
+        hdr_layout.addStretch()
+        layout.addWidget(hdr)
 
-        self._scroll = ctk.CTkScrollableFrame(self, fg_color="transparent")
-        self._scroll.pack(fill="both", expand=True, padx=14, pady=(0, 10))
-        self._rebind = apply_smooth_scroll(self._scroll)
+        # Scroll area for rows
+        self._scroll = QScrollArea()
+        self._scroll.setWidgetResizable(True)
+        self._scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self._scroll.setStyleSheet(
+            f"QScrollArea {{ background: {DARK_BG}; border: none; }}"
+        )
+        self._scroll.viewport().setStyleSheet(f"background: {DARK_BG};")
+        layout.addWidget(self._scroll, 1)
 
-    def _load(self):
-        for w in self._scroll.winfo_children():
-            w.destroy()
+    def _load(self) -> None:
         self._rows.clear()
-        self._services = load_services()
-        for svc in self._services:
+        services = load_services()
+        self._rebuild_scroll(services)
+
+    def _rebuild_scroll(self, services: list[dict]) -> None:
+        old = self._scroll.takeWidget()
+        if old:
+            old.deleteLater()
+        self._rows.clear()
+
+        content = QWidget()
+        content.setStyleSheet(f"background: {DARK_BG};")
+        self._vlay = QVBoxLayout(content)
+        self._vlay.setContentsMargins(14, 10, 14, 10)
+        self._vlay.setSpacing(4)
+        self._vlay.addStretch()
+
+        self._scroll.setWidget(content)
+        for svc in services:
             self._add_row(svc)
-        self._rebind(self._scroll)
 
-    def _add_row(self, svc: dict):
-        row_frame = ctk.CTkFrame(self._scroll, fg_color=CARD_BG,
-                                  corner_radius=8, border_width=1,
-                                  border_color=BORDER)
-        row_frame.pack(fill="x", pady=3)
+    def _add_row(self, svc: dict) -> None:
+        row_frame = QFrame()
+        row_frame.setFixedHeight(52)
+        row_frame.setStyleSheet(
+            f"QFrame {{ background: {CARD_BG}; border: 1px solid {BORDER};"
+            f" border-radius: 8px; }}"
+        )
 
-        # Enabled switch
-        enabled_var = ctk.BooleanVar(value=svc.get("enabled", True))
-        sw = ctk.CTkSwitch(row_frame, text="", variable=enabled_var,
-                           width=44, onvalue=True, offvalue=False,
-                           fg_color="#2a2a3a", progress_color=ACCENT)
-        sw.pack(side="left", padx=(8, 4), pady=8)
+        rl = QHBoxLayout(row_frame)
+        rl.setContentsMargins(8, 6, 8, 6)
+        rl.setSpacing(4)
+
+        # Enabled checkbox
+        enabled_cb = QCheckBox()
+        enabled_cb.setChecked(svc.get("enabled", True))
+        enabled_cb.setFixedWidth(44)
+        enabled_cb.setStyleSheet(f"""
+            QCheckBox {{ background: transparent; spacing: 0; }}
+            QCheckBox::indicator {{
+                width: 18px; height: 18px;
+                border: 1px solid {BORDER}; border-radius: 4px;
+                background: {DARKER_BG};
+            }}
+            QCheckBox::indicator:checked {{
+                background: {ACCENT}; border-color: {ACCENT};
+            }}
+        """)
+        rl.addWidget(enabled_cb)
 
         # Icon entry
-        icon_e = ctk.CTkEntry(row_frame, width=52, font=("Segoe UI", 16),
-                               fg_color=DARKER_BG, border_color=BORDER)
-        icon_e.insert(0, svc.get("icon", ""))
-        icon_e.pack(side="left", padx=4, pady=8)
+        icon_e = QLineEdit(svc.get("icon", ""))
+        icon_e.setFixedSize(52, 36)
+        icon_e.setStyleSheet(f"""
+            QLineEdit {{
+                background: {DARKER_BG}; color: #cccccc;
+                border: 1px solid {BORDER}; border-radius: 6px;
+                padding: 2px 6px; font-size: 16px;
+            }}
+        """)
+        rl.addWidget(icon_e)
 
         # Name entry
-        name_e = ctk.CTkEntry(row_frame, width=136, font=("Segoe UI", 12),
-                               fg_color=DARKER_BG, border_color=BORDER)
-        name_e.insert(0, svc.get("name", ""))
-        name_e.pack(side="left", padx=4, pady=8)
+        name_e = QLineEdit(svc.get("name", ""))
+        name_e.setFixedSize(136, 36)
+        name_e.setStyleSheet(f"""
+            QLineEdit {{
+                background: {DARKER_BG}; color: #cccccc;
+                border: 1px solid {BORDER}; border-radius: 6px;
+                padding: 2px 8px; font-size: 12px;
+            }}
+        """)
+        rl.addWidget(name_e)
 
         # URL entry
-        url_e = ctk.CTkEntry(row_frame, width=236, font=("Segoe UI", 11),
-                              fg_color=DARKER_BG, border_color=BORDER)
-        url_e.insert(0, svc.get("url", ""))
-        url_e.pack(side="left", padx=4, pady=8)
+        url_e = QLineEdit(svc.get("url", ""))
+        url_e.setFixedSize(236, 36)
+        url_e.setStyleSheet(f"""
+            QLineEdit {{
+                background: {DARKER_BG}; color: #cccccc;
+                border: 1px solid {BORDER}; border-radius: 6px;
+                padding: 2px 8px; font-size: 11px;
+            }}
+        """)
+        rl.addWidget(url_e)
 
         # Category dropdown
-        cat_var = ctk.StringVar(value=svc.get("category", "Other"))
-        cat_dd = ctk.CTkOptionMenu(row_frame, values=_CATEGORIES,
-                                    variable=cat_var, width=96,
-                                    fg_color=DARKER_BG,
-                                    button_color=ACCENT,
-                                    font=("Segoe UI", 11))
-        cat_dd.pack(side="left", padx=4, pady=8)
+        cat_dd = QComboBox()
+        cat_dd.addItems(_CATEGORIES)
+        idx = cat_dd.findText(svc.get("category", "Other"))
+        cat_dd.setCurrentIndex(max(idx, 0))
+        cat_dd.setFixedSize(96, 36)
+        cat_dd.setStyleSheet(f"""
+            QComboBox {{
+                background: {DARKER_BG}; color: #cccccc;
+                border: 1px solid {BORDER}; border-radius: 6px;
+                padding: 2px 8px; font-size: 11px;
+            }}
+        """)
+        rl.addWidget(cat_dd)
 
         # Check type dropdown
-        type_var = ctk.StringVar(value=svc.get("check_type", "http"))
-        type_dd = ctk.CTkOptionMenu(row_frame, values=_CHECK_TYPES,
-                                     variable=type_var, width=86,
-                                     fg_color=DARKER_BG,
-                                     button_color=ACCENT,
-                                     font=("Segoe UI", 11))
-        type_dd.pack(side="left", padx=4, pady=8)
+        type_dd = QComboBox()
+        type_dd.addItems(_CHECK_TYPES)
+        idx = type_dd.findText(svc.get("check_type", "http"))
+        type_dd.setCurrentIndex(max(idx, 0))
+        type_dd.setFixedSize(86, 36)
+        type_dd.setStyleSheet(f"""
+            QComboBox {{
+                background: {DARKER_BG}; color: #cccccc;
+                border: 1px solid {BORDER}; border-radius: 6px;
+                padding: 2px 8px; font-size: 11px;
+            }}
+        """)
+        rl.addWidget(type_dd)
 
         # Delete button
-        svc_id = svc.get("id", "")
-        ctk.CTkButton(
-            row_frame, text="✕", width=32, height=28,
-            font=("Segoe UI", 12, "bold"),
-            fg_color="#2e0a0a", hover_color="#4e1a1a",
-            text_color=COLOR_BAD, corner_radius=6,
-            command=lambda f=row_frame: self._delete_row(f),
-        ).pack(side="left", padx=(4, 8), pady=8)
+        del_btn = QPushButton("✕")
+        del_btn.setFixedSize(32, 28)
+        del_btn.setStyleSheet("""
+            QPushButton {
+                background: #2e0a0a; color: #F44336;
+                border: none; border-radius: 6px;
+                font-size: 12px; font-weight: bold;
+            }
+            QPushButton:hover { background: #4e1a1a; }
+        """)
+        del_btn.clicked.connect(lambda: self._delete_row(row_frame))
+        rl.addWidget(del_btn)
+        rl.addStretch()
+
+        # Insert before the trailing stretch
+        self._vlay.insertWidget(self._vlay.count() - 1, row_frame)
 
         self._rows.append({
-            "frame": row_frame,
-            "id": svc_id,
-            "enabled": enabled_var,
-            "icon": icon_e,
-            "name": name_e,
-            "url": url_e,
-            "category": cat_var,
-            "check_type": type_var,
+            "frame":      row_frame,
+            "id":         svc.get("id", ""),
+            "enabled":    enabled_cb,
+            "icon":       icon_e,
+            "name":       name_e,
+            "url":        url_e,
+            "category":   cat_dd,
+            "check_type": type_dd,
         })
 
-    def _add_service(self):
+    def _add_service(self) -> None:
         new_svc = {
             "id": f"custom_{len(self._rows)}",
             "name": "Новый сервис",
             "icon": "🌐",
             "category": "Other",
             "url": "https://",
-            "check_url": "https://",
             "check_type": "http",
-            "port": 443,
             "enabled": True,
         }
         self._add_row(new_svc)
 
-    def _delete_row(self, frame: ctk.CTkFrame):
+    def _delete_row(self, frame: QFrame) -> None:
         self._rows = [r for r in self._rows if r["frame"] is not frame]
-        frame.destroy()
+        frame.deleteLater()
 
-    def _save(self):
+    def _save(self) -> None:
         services = []
         for r in self._rows:
-            url = r["url"].get().strip()
+            url = r["url"].text().strip()
             services.append({
-                "id": r["id"] or r["name"].get().lower().replace(" ", "_"),
-                "name": r["name"].get().strip(),
-                "icon": r["icon"].get().strip() or "🌐",
-                "category": r["category"].get(),
-                "url": url,
-                "check_url": url,
-                "check_type": r["check_type"].get(),
-                "port": 443,
-                "enabled": r["enabled"].get(),
+                "id": r["id"] or r["name"].text().lower().replace(" ", "_"),
+                "name":       r["name"].text().strip(),
+                "icon":       r["icon"].text().strip() or "🌐",
+                "category":   r["category"].currentText(),
+                "url":        url,
+                "check_url":  url,
+                "check_type": r["check_type"].currentText(),
+                "port":       443,
+                "enabled":    r["enabled"].isChecked(),
             })
         save_services(services)
-        self._save_btn.configure(text="✓ Сохранено", text_color=COLOR_OK)
-        self.after(2000, lambda: self._save_btn.configure(
-            text="💾 Сохранить", text_color="white"))
+        self._save_btn.setText("✓ Сохранено")
+        self._save_btn.setStyleSheet(f"""
+            QPushButton {{
+                background: #1e3e1e; color: {COLOR_OK};
+                border: none; border-radius: 8px;
+                font-size: 12px; font-weight: bold;
+            }}
+        """)
+        QTimer.singleShot(2000, self._reset_save_btn)
         if self._on_save:
             self._on_save()
+
+    def _reset_save_btn(self) -> None:
+        self._save_btn.setText("💾 Сохранить")
+        self._save_btn.setStyleSheet(f"""
+            QPushButton {{
+                background: {ACCENT}; color: white;
+                border: none; border-radius: 8px;
+                font-size: 12px; font-weight: bold;
+            }}
+            QPushButton:hover {{ background: #7b8ef5; }}
+        """)

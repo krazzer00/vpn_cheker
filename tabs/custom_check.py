@@ -3,57 +3,139 @@ import queue
 import threading
 from urllib.parse import urlparse
 
-import customtkinter as ctk
+from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
+                              QPushButton, QLineEdit, QFrame, QSizePolicy)
+from PyQt5.QtCore import Qt, pyqtSignal
 
 from engine.ping import ping_host
 from engine.http_check import http_check
 from theme import DARK_BG, BORDER, ACCENT, COLOR_OK, COLOR_BAD, COLOR_WARN, COLOR_MUTED, CARD_BG
 
 
-class CustomCheckTab(ctk.CTkFrame):
-    def __init__(self, master, result_queue: queue.Queue, **kwargs):
-        super().__init__(master, fg_color=DARK_BG, **kwargs)
+class CustomCheckTab(QWidget):
+    _check_done = pyqtSignal(dict, dict, str)
+
+    def __init__(self, result_queue: queue.Queue, parent=None):
+        super().__init__(parent)
         self.result_queue = result_queue
         self._running = False
         self._build()
+        self._check_done.connect(self._on_done)
 
-    def _build(self):
-        center = ctk.CTkFrame(self, fg_color="transparent")
-        center.place(relx=0.5, rely=0.5, anchor="center")
+    def _build(self) -> None:
+        self.setStyleSheet(f"background: {DARK_BG};")
+        outer = QVBoxLayout(self)
+        outer.setAlignment(Qt.AlignCenter)
 
-        ctk.CTkLabel(center, text="Проверить ресурс",
-                     font=("Segoe UI", 18, "bold")).pack(pady=(0, 4))
-        ctk.CTkLabel(center, text="Введи URL или hostname",
-                     font=("Segoe UI", 12), text_color=COLOR_MUTED).pack(pady=(0, 20))
+        center = QWidget()
+        center.setFixedWidth(540)
+        center.setStyleSheet("background: transparent;")
+        cl = QVBoxLayout(center)
+        cl.setAlignment(Qt.AlignCenter)
+        cl.setSpacing(0)
 
-        input_row = ctk.CTkFrame(center, fg_color="transparent")
-        input_row.pack()
-
-        self.url_entry = ctk.CTkEntry(
-            input_row, width=380, height=40,
-            placeholder_text="https://example.com или example.com",
-            font=("Segoe UI", 13),
-            fg_color=CARD_BG, border_color=BORDER
+        title = QLabel("Проверить ресурс")
+        title.setStyleSheet(
+            "font-size: 18px; font-weight: bold; color: #cccccc; background: transparent;"
         )
-        self.url_entry.pack(side="left", padx=(0, 8))
+        title.setAlignment(Qt.AlignCenter)
 
-        self.check_btn = ctk.CTkButton(
-            input_row, text="Проверить", width=110, height=40,
-            font=("Segoe UI", 13, "bold"),
-            fg_color=ACCENT, hover_color="#7b8ef5",
-            command=self._start_check
+        subtitle = QLabel("Введи URL или hostname")
+        subtitle.setStyleSheet(
+            f"font-size: 12px; color: {COLOR_MUTED}; background: transparent;"
         )
-        self.check_btn.pack(side="left")
+        subtitle.setAlignment(Qt.AlignCenter)
 
-        self.result_frame = ctk.CTkFrame(
-            center, fg_color=CARD_BG, corner_radius=12,
-            border_width=1, border_color=BORDER
+        cl.addWidget(title)
+        cl.addSpacing(4)
+        cl.addWidget(subtitle)
+        cl.addSpacing(20)
+
+        # Input row
+        input_row = QHBoxLayout()
+        input_row.setSpacing(8)
+
+        self.url_entry = QLineEdit()
+        self.url_entry.setPlaceholderText("https://example.com или example.com")
+        self.url_entry.setFixedHeight(40)
+        self.url_entry.setStyleSheet(f"""
+            QLineEdit {{
+                background: {CARD_BG}; color: #cccccc;
+                border: 1px solid {BORDER}; border-radius: 8px;
+                padding: 4px 12px; font-size: 13px;
+            }}
+            QLineEdit:focus {{ border-color: {ACCENT}; }}
+        """)
+        self.url_entry.returnPressed.connect(self._start_check)
+
+        self.check_btn = QPushButton("Проверить")
+        self.check_btn.setFixedSize(120, 40)
+        self.check_btn.setStyleSheet(f"""
+            QPushButton {{
+                background: {ACCENT}; color: white; border: none;
+                border-radius: 8px; font-size: 13px; font-weight: bold;
+            }}
+            QPushButton:hover {{ background: #7b8ef5; }}
+            QPushButton:disabled {{ background: #2a2a3a; color: {COLOR_MUTED}; }}
+        """)
+        self.check_btn.clicked.connect(self._start_check)
+
+        input_row.addWidget(self.url_entry, 1)
+        input_row.addWidget(self.check_btn)
+        cl.addLayout(input_row)
+        cl.addSpacing(20)
+
+        # Result card
+        self.result_frame = QFrame()
+        self.result_frame.setStyleSheet(
+            f"QFrame {{ background: {CARD_BG}; border: 1px solid {BORDER};"
+            f" border-radius: 12px; }}"
         )
-        self.result_frame.pack(pady=20, fill="x")
+        self.result_frame.setMinimumHeight(80)
+        self._result_layout = QVBoxLayout(self.result_frame)
+        self._result_layout.setContentsMargins(16, 14, 16, 14)
+        self._result_layout.setSpacing(8)
+        cl.addWidget(self.result_frame)
 
-    def _show_result(self, ping_result: dict, http_result: dict, url: str):
-        for w in self.result_frame.winfo_children():
-            w.destroy()
+        outer.addWidget(center)
+
+    # ── Check logic ────────────────────────────────────────────────────────────
+
+    def _start_check(self) -> None:
+        if self._running:
+            return
+        raw = self.url_entry.text().strip()
+        if not raw:
+            return
+        if not raw.startswith("http"):
+            raw = "https://" + raw
+
+        self._running = True
+        self.check_btn.setEnabled(False)
+        self.check_btn.setText("Проверка...")
+
+        url_copy = raw
+
+        def worker():
+            host = urlparse(url_copy).hostname or url_copy
+            ping_result = ping_host(host)
+            http_result = http_check(url_copy)
+            self._check_done.emit(ping_result, http_result, url_copy)
+
+        threading.Thread(target=worker, daemon=True).start()
+
+    def _on_done(self, ping_result: dict, http_result: dict, url: str) -> None:
+        self._show_result(ping_result, http_result, url)
+        self._running = False
+        self.check_btn.setEnabled(True)
+        self.check_btn.setText("Проверить")
+
+    def _show_result(self, ping_result: dict, http_result: dict, url: str) -> None:
+        # Clear result frame
+        while self._result_layout.count():
+            item = self._result_layout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
 
         accessible = http_result["accessible"]
         ping_ms = ping_result.get("ping_ms")
@@ -62,65 +144,71 @@ class CustomCheckTab(ctk.CTkFrame):
         color = COLOR_OK if accessible else COLOR_BAD
         status_text = "Доступен ✓" if accessible else "Недоступен ✗"
 
-        top = ctk.CTkFrame(self.result_frame, fg_color="transparent")
-        top.pack(fill="x", padx=16, pady=(14, 6))
+        # Top row: URL + status
+        top_row = QHBoxLayout()
+        url_lbl = QLabel(url)
+        url_lbl.setStyleSheet(
+            "font-size: 13px; font-weight: bold; color: #cccccc; background: transparent;"
+        )
+        status_lbl = QLabel(status_text)
+        status_lbl.setStyleSheet(
+            f"font-size: 12px; font-weight: bold; color: {color}; background: transparent;"
+        )
+        top_row.addWidget(url_lbl, 1)
+        top_row.addWidget(status_lbl)
 
-        ctk.CTkLabel(top, text=url, font=("Segoe UI", 13, "bold"),
-                     text_color="#cccccc").pack(side="left")
-        ctk.CTkLabel(top, text=status_text, font=("Segoe UI", 12, "bold"),
-                     text_color=color).pack(side="right")
+        top_w = QWidget()
+        top_w.setStyleSheet("background: transparent;")
+        top_w.setLayout(top_row)
+        self._result_layout.addWidget(top_w)
 
-        stats = ctk.CTkFrame(self.result_frame, fg_color="transparent")
-        stats.pack(fill="x", padx=16, pady=(0, 14))
+        # Stats row
+        stats = QHBoxLayout()
+        stats.setAlignment(Qt.AlignLeft)
+        stats.setSpacing(0)
 
-        def stat(label, value, col="#e0e0e0"):
-            f = ctk.CTkFrame(stats, fg_color="transparent")
-            f.pack(side="left", padx=(0, 24))
-            ctk.CTkLabel(f, text=label, font=("Segoe UI", 9),
-                         text_color=COLOR_MUTED).pack(anchor="w")
-            ctk.CTkLabel(f, text=value, font=("Segoe UI", 16, "bold"),
-                         text_color=col).pack(anchor="w")
-
-        ping_color = COLOR_OK if ping_ms and ping_ms < 100 else (COLOR_WARN if ping_ms else COLOR_BAD)
-        stat("ПИНГ", f"{ping_ms:.0f} ms" if ping_ms is not None else "—", ping_color)
+        ping_color = (COLOR_OK if ping_ms and ping_ms < 100
+                      else (COLOR_WARN if ping_ms else COLOR_BAD))
+        self._add_stat(stats, "ПИНГ",
+                       f"{ping_ms:.0f} ms" if ping_ms is not None else "—",
+                       ping_color)
 
         if loss_pct is None:
-            stat("ПОТЕРИ", "н/п", COLOR_MUTED)
+            self._add_stat(stats, "ПОТЕРИ", "н/п", COLOR_MUTED)
         else:
-            loss_color = COLOR_OK if loss_pct == 0 else (COLOR_WARN if loss_pct < 10 else COLOR_BAD)
-            stat("ПОТЕРИ", f"{loss_pct:.1f}%", loss_color)
+            lc = COLOR_OK if loss_pct == 0 else (COLOR_WARN if loss_pct < 10 else COLOR_BAD)
+            self._add_stat(stats, "ПОТЕРИ", f"{loss_pct:.1f}%", lc)
 
         sc = http_result.get("status_code")
-        stat("HTTP", str(sc) if sc else "—")
+        self._add_stat(stats, "HTTP", str(sc) if sc else "—")
 
         rt = http_result.get("response_ms")
-        stat("ОТВЕТ", f"{rt:.0f} ms" if rt is not None else "—")
+        self._add_stat(stats, "ОТВЕТ", f"{rt:.0f} ms" if rt is not None else "—")
 
-    def _start_check(self):
-        if self._running:
-            return
-        raw = self.url_entry.get().strip()
-        if not raw:
-            return
+        stats_w = QWidget()
+        stats_w.setStyleSheet("background: transparent;")
+        stats_w.setLayout(stats)
+        self._result_layout.addWidget(stats_w)
 
-        if not raw.startswith("http"):
-            raw = "https://" + raw
+    def _add_stat(self, layout: QHBoxLayout, label: str,
+                  value: str, color: str = "#e0e0e0") -> None:
+        col = QVBoxLayout()
+        col.setSpacing(0)
+        col.setContentsMargins(0, 0, 24, 0)
 
-        self._running = True
-        self.check_btn.configure(state="disabled", text="Проверка...")
+        lbl = QLabel(label)
+        lbl.setStyleSheet(f"font-size: 9px; color: {COLOR_MUTED}; background: transparent;")
+        val = QLabel(value)
+        val.setStyleSheet(
+            f"font-size: 16px; font-weight: bold; color: {color}; background: transparent;"
+        )
+        col.addWidget(lbl)
+        col.addWidget(val)
 
-        def worker():
-            host = urlparse(raw).hostname or raw
-            ping_result = ping_host(host)
-            http_result = http_check(raw)
-            self.after(0, lambda: self._on_done(ping_result, http_result, raw))
+        w = QWidget()
+        w.setStyleSheet("background: transparent;")
+        w.setLayout(col)
+        layout.addWidget(w)
 
-        threading.Thread(target=worker, daemon=True).start()
-
-    def _on_done(self, ping_result, http_result, url):
-        self._show_result(ping_result, http_result, url)
-        self._running = False
-        self.check_btn.configure(state="normal", text="Проверить")
-
-    def handle_result(self, msg: dict):
-        pass  # custom tab uses its own worker thread, not the shared queue
+    def handle_result(self, msg: dict) -> None:
+        pass  # Custom tab uses its own worker thread, not the shared queue

@@ -1,10 +1,11 @@
 # engine/speedtest.py
 import concurrent.futures
-import statistics
 import time
 from typing import TypedDict
 
 import requests
+
+from engine.ping import ping_host
 
 _BASE = "https://speed.cloudflare.com"
 _UA = {"User-Agent": "VPNChecker/1.0"}
@@ -14,7 +15,6 @@ _DL_STREAMS = 4
 _DL_BYTES = 10_000_000   # 10 MB per stream
 _UL_STREAMS = 3
 _UL_BYTES = 5_000_000    # 5 MB per stream
-_PING_SAMPLES = 8
 
 
 class SpeedResult(TypedDict):
@@ -40,27 +40,22 @@ def _upload_one() -> int:
 
 def run_speedtest() -> SpeedResult:
     """
-    Measure download/upload speed and latency via Cloudflare endpoints.
-    Uses a warm-up request so TLS is established before ping measurement.
+    Measure download/upload speed and latency via Cloudflare.
+    Ping uses ICMP (via engine.ping) for accuracy matching speedtest.net.
     Parallel streams for download/upload to saturate high-bandwidth connections.
     """
     session = requests.Session()
     session.headers.update(_UA)
 
     try:
-        # Warm-up: establish TCP + TLS once
+        # Warm-up: establish TCP + TLS before measurements
         session.get(f"{_BASE}/__down?bytes=1", timeout=8)
 
-        # Ping: median of N RTTs on warm connection
-        samples = []
-        for _ in range(_PING_SAMPLES):
-            t = time.perf_counter()
-            session.get(f"{_BASE}/__down?bytes=1", timeout=8)
-            samples.append((time.perf_counter() - t) * 1000)
-        samples.sort()
-        ping_ms = round(statistics.median(samples[:-1]), 1)  # drop highest outlier
+        # Ping: ICMP for accurate network RTT (matches speedtest.net methodology)
+        ping_result = ping_host("speed.cloudflare.com")
+        ping_ms = ping_result.get("ping_ms")
 
-        # Download: parallel streams
+        # Download: parallel streams to saturate high-bandwidth connections
         t0 = time.perf_counter()
         with concurrent.futures.ThreadPoolExecutor(max_workers=_DL_STREAMS) as ex:
             futures = [ex.submit(_download_one) for _ in range(_DL_STREAMS)]

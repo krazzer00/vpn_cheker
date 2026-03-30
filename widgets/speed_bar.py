@@ -1,110 +1,129 @@
 # widgets/speed_bar.py
-import tkinter as tk
-import customtkinter as ctk
+from PyQt5.QtWidgets import QFrame, QHBoxLayout, QVBoxLayout, QLabel
+from PyQt5.QtCore import Qt
+
 from theme import DARKER_BG, BORDER, COLOR_MUTED, COLOR_OK, COLOR_WARN, COLOR_BAD
 
 
 def _speed_color(mbps, ok=50, warn=15):
     if mbps is None:
         return COLOR_MUTED
-    if mbps >= ok:
-        return COLOR_OK
-    if mbps >= warn:
-        return COLOR_WARN
-    return COLOR_BAD
+    return COLOR_OK if mbps >= ok else (COLOR_WARN if mbps >= warn else COLOR_BAD)
 
 
 def _ping_color(ms):
     if ms is None:
         return COLOR_MUTED
-    if ms < 60:
-        return COLOR_OK
-    if ms < 150:
-        return COLOR_WARN
-    return COLOR_BAD
+    return COLOR_OK if ms < 60 else (COLOR_WARN if ms < 150 else COLOR_BAD)
 
 
-class SpeedBar(ctk.CTkFrame):
-    def __init__(self, master, **kwargs):
-        super().__init__(master, fg_color=DARKER_BG, corner_radius=10,
-                         border_width=1, border_color=BORDER, **kwargs)
+class SpeedBar(QFrame):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setStyleSheet(
+            f"QFrame {{ background: {DARKER_BG}; border: 1px solid {BORDER};"
+            f" border-radius: 10px; }}"
+        )
+        self.setFixedHeight(76)
         self._build()
 
-    def _build(self):
-        # Use tk.Frame for the inner layout row (no CTk redraw on resize)
-        row = tk.Frame(self, bg=DARKER_BG)
-        row.pack(fill="both", expand=True, padx=4)
+    def _build(self) -> None:
+        row = QHBoxLayout(self)
+        row.setContentsMargins(4, 0, 4, 0)
+        row.setSpacing(0)
 
-        self.ping_val = self._item(row, "⊙  ПИНГ", "—", "мс")
+        self.ping_val  = self._item(row, "⊙  ПИНГ",     "—", "мс")
         self._divider(row)
-        self.dl_val = self._item(row, "↓  ЗАГРУЗКА", "—", "Мб/с")
+        self.dl_val    = self._item(row, "↓  ЗАГРУЗКА",  "—", "Мб/с")
         self._divider(row)
-        self.ul_val = self._item(row, "↑  ВЫГРУЗКА", "—", "Мб/с")
+        self.ul_val    = self._item(row, "↑  ВЫГРУЗКА",  "—", "Мб/с")
         self._divider(row)
-        self.loss_val = self._item(row, "◈  ПОТЕРИ", "—", "%")
+        self.loss_val  = self._item(row, "◈  ПОТЕРИ",    "—", "%")
+        row.addStretch()
 
-    def _item(self, parent, label, value, unit):
-        frame = tk.Frame(parent, bg=DARKER_BG)
-        frame.pack(side="left", padx=22, pady=12)
+    def _item(self, layout: QHBoxLayout, label: str, value: str, unit: str) -> QLabel:
+        block = QVBoxLayout()
+        block.setSpacing(1)
+        block.setContentsMargins(22, 10, 0, 10)
 
-        ctk.CTkLabel(frame, text=label,
-                     font=("Segoe UI", 9, "bold"),
-                     fg_color="transparent",
-                     text_color=COLOR_MUTED).pack(anchor="w")
+        title_lbl = QLabel(label)
+        title_lbl.setStyleSheet(
+            f"font-size: 9px; font-weight: bold; color: {COLOR_MUTED};"
+            " background: transparent;"
+        )
 
-        # Value + unit on same line
-        val_row = tk.Frame(frame, bg=DARKER_BG)
-        val_row.pack(anchor="w")
+        val_row = QHBoxLayout()
+        val_row.setSpacing(0)
+        val_row.setContentsMargins(0, 0, 0, 0)
 
-        val = ctk.CTkLabel(val_row, text=value,
-                           font=("Segoe UI", 22, "bold"),
-                           fg_color="transparent",
-                           text_color="#ccccdd")
-        val.pack(side="left")
+        val = QLabel(value)
+        val.setStyleSheet(
+            "font-size: 22px; font-weight: bold; color: #ccccdd; background: transparent;"
+        )
+        unit_lbl = QLabel(f" {unit}")
+        unit_lbl.setStyleSheet(
+            "font-size: 11px; color: #44445a; background: transparent;"
+        )
+        unit_lbl.setAlignment(Qt.AlignBottom)
 
-        ctk.CTkLabel(val_row, text=f" {unit}",
-                     font=("Segoe UI", 11),
-                     fg_color="transparent",
-                     text_color="#44445a").pack(side="left", pady=(4, 0))
+        val_row.addWidget(val)
+        val_row.addWidget(unit_lbl)
+
+        block.addWidget(title_lbl)
+        block.addLayout(val_row)
+        layout.addLayout(block)
         return val
 
-    def _divider(self, parent):
-        tk.Frame(parent, bg=BORDER, width=1).pack(
-            side="left", fill="y", pady=10)
+    def _divider(self, layout: QHBoxLayout) -> None:
+        div = QFrame()
+        div.setFrameShape(QFrame.VLine)
+        div.setFixedWidth(1)
+        div.setStyleSheet(f"background: {BORDER}; border: none;")
+        wrapper = QVBoxLayout()
+        wrapper.setContentsMargins(8, 10, 0, 10)
+        wrapper.addWidget(div)
+        layout.addLayout(wrapper)
 
-    def update_speed(self, result: dict):
-        dl = result.get("download_mbps")
-        ul = result.get("upload_mbps")
+    def update_speed(self, result: dict) -> None:
+        dl   = result.get("download_mbps")
+        ul   = result.get("upload_mbps")
         ping = result.get("ping_ms")
+        loss = result.get("loss_pct")
 
         if dl is not None:
-            self.dl_val.configure(
-                text=f"{dl}",
-                text_color=_speed_color(dl, ok=50, warn=15),
+            self.dl_val.setText(str(dl))
+            self.dl_val.setStyleSheet(
+                f"font-size: 22px; font-weight: bold;"
+                f" color: {_speed_color(dl, ok=50, warn=15)}; background: transparent;"
             )
         else:
-            self.dl_val.configure(text="N/A", text_color=COLOR_MUTED)
+            self.dl_val.setText("N/A")
+            self.dl_val.setStyleSheet(
+                f"font-size: 22px; font-weight: bold; color: {COLOR_MUTED}; background: transparent;"
+            )
 
         if ul is not None:
-            self.ul_val.configure(
-                text=f"{ul}",
-                text_color=_speed_color(ul, ok=20, warn=5),
+            self.ul_val.setText(str(ul))
+            self.ul_val.setStyleSheet(
+                f"font-size: 22px; font-weight: bold;"
+                f" color: {_speed_color(ul, ok=20, warn=5)}; background: transparent;"
             )
         else:
-            self.ul_val.configure(text="N/A", text_color=COLOR_MUTED)
+            self.ul_val.setText("N/A")
+            self.ul_val.setStyleSheet(
+                f"font-size: 22px; font-weight: bold; color: {COLOR_MUTED}; background: transparent;"
+            )
 
         if ping is not None:
-            self.ping_val.configure(
-                text=f"{ping}",
-                text_color=_ping_color(ping),
+            self.ping_val.setText(str(ping))
+            self.ping_val.setStyleSheet(
+                f"font-size: 22px; font-weight: bold;"
+                f" color: {_ping_color(ping)}; background: transparent;"
             )
 
-    def update_ping(self, ping_ms, loss_pct):
-        if ping_ms is not None:
-            self.ping_val.configure(
-                text=f"{ping_ms}",
-                text_color=_ping_color(ping_ms),
+        if loss is not None:
+            lc = COLOR_OK if loss == 0 else (COLOR_WARN if loss < 10 else COLOR_BAD)
+            self.loss_val.setText(f"{loss:.1f}")
+            self.loss_val.setStyleSheet(
+                f"font-size: 22px; font-weight: bold; color: {lc}; background: transparent;"
             )
-        if loss_pct is not None:
-            color = COLOR_OK if loss_pct == 0 else (COLOR_WARN if loss_pct < 10 else COLOR_BAD)
-            self.loss_val.configure(text=f"{loss_pct:.1f}", text_color=color)
