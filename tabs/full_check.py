@@ -270,7 +270,8 @@ class FullCheckTab(QWidget):
         content_w = max(120, self.width() - 220 - 28)
         # 3 columns with 8px gap on each side of gaps = 2×8=16px total gap
         col_w = max(120, (content_w - 16) // 3)
-        card_h = max(100, int(col_w * 0.38))
+        # Grow subtly with window but cap so cards never dominate the screen
+        card_h = min(130, max(100, int(col_w * 0.30)))
         for card in self.cards.values():
             card.setFixedHeight(card_h)
 
